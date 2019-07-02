@@ -7,11 +7,12 @@ from tkinter import filedialog
 import numpy as np
 import PIL
 import time
+import tkinter.messagebox
 
 #########################################################################################################
 # Creating the main window with menu
 main_window = Tk()
-main_window.geometry("600x200")
+main_window.geometry("500x150")
 main_window.title("Tracking Program")
 
 #########################################################################################################
@@ -33,6 +34,9 @@ collection = False
 draw = False
 pos_x = []
 pos_y = []   
+
+# save window global variables
+
 #########################################################################################################
 
 # setting values
@@ -79,7 +83,7 @@ def TrackerChooser():
 def StartTracking():
 
     tracker_window = Toplevel()
-    tracker_window.geometry("800x800") # width*height
+    tracker_window.geometry("800x700") # width*height
     tracker_window.title("Tracking Window")
 
     trackers = cv2.MultiTracker_create()
@@ -109,6 +113,7 @@ def StartTracking():
         global collection , draw
         global pos_x , pos_y
         ret , frame = cap.read()
+        frame = cv2.resize(frame, (800, 600), interpolation = cv2.INTER_LINEAR)
         if ret == True:
             color_index = 0
             if camera.get() == 0:
@@ -156,11 +161,13 @@ def StartTracking():
         tracker_trackingwindow = Tracker_used
         trackers.add(tracker_trackingwindow, frame, box)
         cv2.destroyWindow('Selector')
+        button3_tracking.configure(state = NORMAL)
 
     def drawing():
         global fx,fy,fw,fh,x,y,w,h,ox,oy
         global start_time
         global collection , draw
+        global pos_x , pos_y
         print("Drawing the reference coordinates")
         draw = True
         fx = x
@@ -170,7 +177,10 @@ def StartTracking():
         (ox , oy)  = (x+w/2 , y+h/2)
         collection = True
         start_time = time.time()
+        pos_x = []
+        pos_y = []
 
+    # Exit will also enable entry to save window
     def exitt():
         global end_time , total_time
         end_time = time.time()
@@ -179,21 +189,100 @@ def StartTracking():
         print(pos_y)
         cap.release()
         tracker_window.destroy()
+        
+        save_window = Toplevel()
+        save_window.geometry("600x300") # width*height
+        save_window.title("Tracking Window")
+        save_window.resizable(width=FALSE, height=FALSE)
 
-    button1_tracking = Button(tracker_window , text="Pause" , bg="orange" , fg="black" ,
-                      command = pausing , state=NORMAL)
-    button1_tracking.place(x = 10 , y = 650)
+        def directory_select():
+            global save_path 
+            save_path = filedialog.askdirectory()
+            if save_path == '':
+                button2_saving.configure(state = DISABLED)
+            else:
+                button2_saving.configure(state = NORMAL)
+
+
+        def saving_the_files():
+            path_x = save_path + '//' + entry1_save_window.get()
+            print(path_x)
+            path_y = save_path + '//' + entry2_save_window.get()
+            path_background = save_path + '//' + entry3_save_window.get()
+            path_time = save_path + '//' + entry4_save_window.get()
+
+            np.save(path_x , pos_x)
+            np.save(path_y , pos_y)
+            np.save(path_time , total_time)
+            cv2.imwrite(path_background,black_background)
+            tkinter.messagebox.showerror("Saving" , "Done Saving")
+            
+
+        label1_save_window = Label(save_window , text = 'If You Want to save the data then select the directory \n  Enter The Name of the files along with Extensions' , 
+                                fg='red',bg='yellow',font=("arial" , 16 , "bold"),relief='solid')
+        label1_save_window.pack()
+
+        button1_saving = Button(save_window , text="Directory" , bg="orange" , fg="black" ,
+                      command = directory_select , state=NORMAL , font=("arial" , 10 , "bold"),relief='solid' , 
+                      width = 15)
+        button1_saving.pack()
+
+        label3_save_window = Label(save_window , text = 'X Values' , 
+                                fg='red',bg='yellow',font=("arial" , 10 , "bold"),relief='solid')
+        label3_save_window.place(x = 20 , y = 120)
+        label4_save_window = Label(save_window , text = 'Y Values' , 
+                                fg='red',bg='yellow',font=("arial" , 10 , "bold"),relief='solid')
+        label4_save_window.place(x = 20 , y = 150)
+        label5_save_window = Label(save_window , text = 'Background Image' , 
+                                fg='red',bg='yellow',font=("arial" , 10 , "bold"),relief='solid')
+        label5_save_window.place(x = 20 , y = 180)
+        label6_save_window = Label(save_window , text = 'Time Taken' , 
+                                fg='red',bg='yellow',font=("arial" , 10 , "bold"),relief='solid')
+        label6_save_window.place(x = 20 , y = 210)
+
+        entry1_save_window = Entry(save_window , width = 30)
+        entry1_save_window.place(x = 180 , y = 120)
+        entry1_save_window.insert(END, 'X.npy')
+        entry2_save_window = Entry(save_window , width = 30)
+        entry2_save_window.place(x = 180 , y = 150)
+        entry2_save_window.insert(END, 'Y.npy')
+        entry3_save_window = Entry(save_window , width = 30)
+        entry3_save_window.place(x = 180 , y = 180)
+        entry3_save_window.insert(END, 'Back.jpg')
+        entry4_save_window = Entry(save_window , width = 30)
+        entry4_save_window.place(x = 180 , y = 210)
+        entry4_save_window.insert(END, 'T.npy')
+
+        button2_saving = Button(save_window , text="Save" , bg="orange" , fg="black" ,
+                      command = saving_the_files , state=DISABLED , font=("arial" , 10 , "bold"),relief='solid' , 
+                      width = 15)
+        button2_saving.place(x = 230 , y = 250)
+
+
+    # disabling cross
+    def disable_cross():
+        tkinter.messagebox.showerror("EXIT" , "Please Exit Using Exit Button")
+
+    button1_tracking = Button(tracker_window , text="Pause\ \n Continue" , bg="orange" , fg="black" ,
+                      command = pausing , state=NORMAL , font=("arial" , 10 , "bold"),relief='solid' , 
+                      width = 15)
+    button1_tracking.place(x = 120 , y = 620)
     button2_tracking = Button(tracker_window , text="Select" , bg="orange" , fg="black" ,
-                      command = select , state=NORMAL)
-    button2_tracking.place(x = 60 , y = 650)
-    button3_tracking = Button(tracker_window , text="Draw And Collect Data" , bg="orange" , fg="black" ,
-                      command = drawing , state=NORMAL , width = 10)
-    button3_tracking.place(x = 120 , y = 650)
+                      command = select , state=NORMAL, font=("arial" , 10 , "bold"),relief='solid' , 
+                      width = 15)
+    button2_tracking.place(x = 270 , y = 620)
+    button3_tracking = Button(tracker_window , text="Draw And \n Collect Data" , bg="orange" , fg="black" ,
+                      command = drawing , state=DISABLED , font=("arial" , 10 , "bold"),relief='solid' , 
+                      width = 15)
+    button3_tracking.place(x = 420 , y = 620)
     # Always use exit for exiting the program
     button4_tracking = Button(tracker_window , text="Exit" , bg="orange" , fg="black" ,
-                      command = exitt , state=NORMAL)
-    button4_tracking.place(x = 250 , y = 650)
+                      command = exitt , state=NORMAL , font=("arial" , 10 , "bold"),relief='solid' , 
+                      width = 15)
+    button4_tracking.place(x = 570 , y = 620)
 
+    # tracker_window.resizable(width=FALSE, height=FALSE)
+    tracker_window.protocol("WM_DELETE_WINDOW", disable_cross)
     tracker_window.mainloop()
 
 # Logic for enabling and disabling boxes
@@ -215,22 +304,21 @@ label1_main = Label(main_window , text = 'Please Read The Use Instructions in He
                     fg='red',bg='yellow',font=("arial" , 16 , "bold"),relief='solid')
 label1_main.pack()
 button1_main = Button(main_window , text="Start Tracking" , bg="orange" , fg="black" ,
-                      command = StartTracking , state=NORMAL)
-button1_main.place(x = 250 , y = 40)  
-button2_main = Button(main_window , text="Open Plotter" , bg="orange" , fg="black" ,
-                      command = Plotter , state=NORMAL)
-button2_main.place(x = 250 , y = 120)  
+                      command = StartTracking , state=NORMAL , width = 20 , 
+                      font=("arial" , 10 , "bold"))
+button1_main.pack()  
 radiobutton1_main = Radiobutton(main_window , text = 'Use Webcam', variable=camera,
                                 value=0 , command = switch)
-radiobutton1_main.place(x=250,y=70)
+radiobutton1_main.pack()
 radiobutton2_main = Radiobutton(main_window , text = 'Use video',variable=camera,
                                 value=1 , command = switch)
-radiobutton2_main.place(x=250,y=90)
+radiobutton2_main.pack()
 spinbox1_main = Spinbox(main_window,from_=0,to=5,width=2)
-spinbox1_main.place(x=400,y=70)
-
-
-
+spinbox1_main.place(x = 300 , y = 60)
+button2_main = Button(main_window , text="Open Plotter" , bg="orange" , fg="black" ,
+                      command = Plotter , state=NORMAL , width = 20 ,
+                      font=("arial" , 10 , "bold"))
+button2_main.pack() 
 
 
 menu = Menu(main_window)
@@ -274,5 +362,5 @@ help_menu.add_command(label="About", command=About)
 
 #########################################################################################################
 
-
+main_window.resizable(width=FALSE, height=FALSE)
 main_window.mainloop()
