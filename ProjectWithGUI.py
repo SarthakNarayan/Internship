@@ -9,6 +9,7 @@ import PIL
 import time
 import tkinter.messagebox
 import matplotlib.pyplot as plt
+import allantools
 
 #########################################################################################################
 # Creating the main window with menu
@@ -58,6 +59,11 @@ var_c1 = StringVar()
 loaded_X = ''
 loaded_Y = ''
 loaded_time = ''
+
+# ad_plotter global variables
+value_type = IntVar()
+adplotter_path = ''
+adplotter_values = ''
 #########################################################################################################
 
 # setting values
@@ -65,6 +71,7 @@ camera.set(0)
 spinbox1_main.set('0')
 tracker.set('csrt')
 var_c1.set(0)
+value_type.set(0)
 
 # opening a file using a dialog box
 def OpenFile():
@@ -434,8 +441,120 @@ def Value_Plotter():
                                              state = DISABLED)
     checkbutton1_value_plotter.place(x=300,y=150)
 
+
 def Allan_Deviation_Plotter():
-    pass
+    ad_plotter_window = Toplevel()
+    ad_plotter_window.geometry("400x350") # width*height
+    ad_plotter_window.title("Plotting Window")
+    ad_plotter_window.resizable(width=FALSE, height=FALSE)
+
+    tau1 = np.logspace(0, 4, 1000)
+
+    def value_adplotter():
+        global adplotter_path , adplotter_values
+        adplotter_path = askopenfilename(initialdir = "/",title = "Select Values")
+        if adplotter_path != '':
+            button2_adplotter.configure(state = NORMAL)
+            adplotter_values = np.load(adplotter_path)
+            plt.grid(color='red')
+
+    def plot_adplotter():
+        # try:
+        rate = int(entry1_adplotter.get())
+        if value_type.get() == 0:
+            title = 'Allan Deviation for X values'
+        elif value_type.get() == 1:
+            title = 'Allan Deviation for Y values'
+        (tau2, ad, _ , _ ) = allantools.oadev(adplotter_values, rate=rate, data_type="freq", taus=tau1)
+
+        idx_min = np.argmin(ad)
+        idx_max = np.argmax(ad)
+        allandeviation_minimum_value = ad[idx_min] 
+        allandeviation_maximum_value = ad[idx_max]
+        tau_min = tau2[idx_min]
+        tau_max = tau2[idx_max]
+
+        t21_ind1 = np.where(tau2==1.0) # index of array t2 where the value is 1s.
+        noise = ad[t21_ind1[0]]
+        # noise density is value of ADEV curve at 1s averaging time.
+
+        label8_adplotter.configure(text = str(allandeviation_minimum_value))
+        label9_adplotter.configure(text = str(allandeviation_maximum_value))
+        label10_adplotter.configure(text = str(tau_min))
+        label11_adplotter.configure(text = str(tau_max))
+        label12_adplotter.configure(text = str(noise))
+
+        plt.loglog(tau2, ad,c=np.random.rand(3,))
+        plt.title(title)
+        plt.xlabel('tau')
+        plt.ylabel('ADEV [V]')
+        plt.show()
+
+        # except:
+            # tkinter.messagebox.showerror('Rate Error' , 'Choose a larger or a smaller rate')
+
+    label1_adplotter = Label(ad_plotter_window , text = 'Select X or Y for Allan Deviation' , 
+                    fg='red',bg='yellow',font=("arial" , 16 , "bold"),relief='solid')
+    label1_adplotter.pack()
+
+    radiobutton1_adplotter = Radiobutton(ad_plotter_window , text = 'Use X', variable=value_type,
+                                value=0)
+    radiobutton1_adplotter.place(x = 100 , y = 30)
+    radiobutton2_adplotter = Radiobutton(ad_plotter_window , text = 'Use Y',variable=value_type,
+                                value=1)
+    radiobutton2_adplotter.place(x = 240 , y = 30)
+
+    button1_adplotter = Button(ad_plotter_window , text="Select Values" , bg="orange" , fg="black" ,
+                                    command = value_adplotter , state=NORMAL , width = 20 , 
+                                    font=("arial" , 10 , "bold"))
+    button1_adplotter.place(x = 30 , y = 70)
+    button2_adplotter = Button(ad_plotter_window , text="Plot Allan \n Deviation" , bg="orange" , fg="black" ,
+                                    command = plot_adplotter , state=DISABLED , width = 20 , 
+                                    font=("arial" , 10 , "bold"))
+    button2_adplotter.place(x = 110 , y = 110)
+
+    entry1_adplotter = Entry(ad_plotter_window , width = 4)
+    entry1_adplotter.place(x = 280 , y = 70)
+    entry1_adplotter.insert(END, '20')
+
+    label2_adplotter = Label(ad_plotter_window , text = 'Rate : ' , 
+                    fg='red',bg='yellow',font=("arial" , 10 , "bold"),relief='solid')
+    label2_adplotter.place(x = 220 , y = 70)
+
+
+    label3_adplotter = Label(ad_plotter_window , text = 'The minimum value for allan deviation : ' , 
+                    fg='red',bg='yellow',font=("arial" , 8 , "bold"),relief='solid')
+    label3_adplotter.place(x = 10 , y = 200)
+    label4_adplotter = Label(ad_plotter_window , text = 'The maximum value for allan deviation : ' , 
+                    fg='red',bg='yellow',font=("arial" , 8 , "bold"),relief='solid')
+    label4_adplotter.place(x = 10 , y = 230)
+    label5_adplotter = Label(ad_plotter_window , text = 'The tau at which lowest value occurs : ' , 
+                    fg='red',bg='yellow',font=("arial" , 8 , "bold"),relief='solid')
+    label5_adplotter.place(x = 10 , y = 260)
+    label6_adplotter = Label(ad_plotter_window , text = 'The tau at which maximum value occurs : ' , 
+                    fg='red',bg='yellow',font=("arial" , 8 , "bold"),relief='solid')
+    label6_adplotter.place(x = 10 , y = 290)
+    label7_adplotter = Label(ad_plotter_window , text = 'Noise spectral density : ' , 
+                    fg='red',bg='yellow',font=("arial" , 8 , "bold"),relief='solid')
+    label7_adplotter.place(x = 10 , y = 320)
+
+
+    label8_adplotter = Label(ad_plotter_window , text = '' , 
+                    fg='red',bg='yellow',font=("arial" , 8 , "bold"),relief='solid')
+    label8_adplotter.place(x = 250 , y = 200)
+    label9_adplotter = Label(ad_plotter_window , text = '' , 
+                    fg='red',bg='yellow',font=("arial" , 8 , "bold"),relief='solid')
+    label9_adplotter.place(x = 250 , y = 230)
+    label10_adplotter = Label(ad_plotter_window , text = '' , 
+                    fg='red',bg='yellow',font=("arial" , 8 , "bold"),relief='solid')
+    label10_adplotter.place(x = 250 , y = 260)
+    label11_adplotter = Label(ad_plotter_window , text = '' , 
+                    fg='red',bg='yellow',font=("arial" , 8 , "bold"),relief='solid')
+    label11_adplotter.place(x = 250 , y = 290)
+    label12_adplotter = Label(ad_plotter_window , text = '' , 
+                    fg='red',bg='yellow',font=("arial" , 8 , "bold"),relief='solid')
+    label12_adplotter.place(x = 250 , y = 320)
+
 
 label1_main = Label(main_window , text = 'Please Read The Use Instructions in Help Menu' , 
                     fg='red',bg='yellow',font=("arial" , 16 , "bold"),relief='solid')
