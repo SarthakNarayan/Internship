@@ -8,6 +8,7 @@ import numpy as np
 import PIL
 import time
 import tkinter.messagebox
+import matplotlib.pyplot as plt
 
 #########################################################################################################
 # Creating the main window with menu
@@ -15,6 +16,17 @@ main_window = Tk()
 main_window.geometry("500x150")
 main_window.title("Tracking Program")
 
+def center_window(width=300, height=200):
+    # get screen width and height
+    screen_width = main_window.winfo_screenwidth()
+    screen_height = main_window.winfo_screenheight()
+
+    # calculate position x and y coordinates
+    x = (screen_width/2) - (width/2)
+    y = (screen_height/2) - (height/2)
+    main_window.geometry('%dx%d+%d+%d' % (width, height, x, y))
+
+center_window(500, 150)
 #########################################################################################################
 # main window global variables
 tracker = StringVar()
@@ -37,12 +49,22 @@ pos_y = []
 
 # save window global variables
 
+# value plotter global variables
+load_path_x_plotter = ''
+load_path_y_plotter = ''
+load_path_time_plotter = ''
+enable_plot = 0
+var_c1 = StringVar()
+loaded_X = ''
+loaded_Y = ''
+loaded_time = ''
 #########################################################################################################
 
 # setting values
 camera.set(0)
 spinbox1_main.set('0')
 tracker.set('csrt')
+var_c1.set(0)
 
 # opening a file using a dialog box
 def OpenFile():
@@ -297,7 +319,122 @@ def switch():
         spinbox1_main.configure(state=NORMAL)
         button1_main.configure(state=NORMAL)
 
-def Plotter():
+def Value_Plotter():
+    value_plotter_window = Toplevel()
+    value_plotter_window.geometry("400x250") # width*height
+    value_plotter_window.title("Plotting Window")
+    value_plotter_window.resizable(width=FALSE, height=FALSE)
+
+    def value_plotter_x_values():
+        global load_path_x_plotter , enable_plot , loaded_X
+        load_path_x_plotter = askopenfilename(initialdir = "/",title = "Select X values")
+        if load_path_x_plotter != '':
+            enable_plot += 1
+        if enable_plot == 2:
+            button4_value_plotter.configure(state = NORMAL)
+        loaded_X = np.load(load_path_x_plotter)
+
+    def value_plotter_y_values():
+        global load_path_y_plotter , enable_plot , loaded_Y
+        load_path_y_plotter = askopenfilename(initialdir = "/",title = "Select Y values")
+        if load_path_y_plotter != '':
+            enable_plot += 1
+        if enable_plot == 2:
+            button4_value_plotter.configure(state = NORMAL)
+        loaded_Y = np.load(load_path_y_plotter)
+
+    def value_plotter_time_values():
+        global load_path_time_plotter , loaded_time
+        load_path_time_plotter = askopenfilename(initialdir = "/",title = "Select time values")
+        if load_path_time_plotter != '':
+            checkbutton1_value_plotter.configure(state = NORMAL)
+        loaded_time = np.load(load_path_time_plotter)
+
+    def value_plot():
+        X_values = loaded_X
+        Y_values = loaded_Y
+        timeforxaxis = loaded_time
+        x_label = ''
+        plot_title_x = ''
+        plot_title_y = ''
+
+        if var_c1.get() == '0':
+            x_axis = np.arange(1,(len(X_values)+1),1)
+            x_label = 'frames'
+            plot_title_x = 'X coordinates vs Frames'
+            plot_title_y = 'Y coordinates vs Frames'
+        else:
+            x_axis = np.linspace(1,(timeforxaxis+1),len(X_values))
+            x_label = 'time(s)'
+            plot_title_x = 'X coordinates vs Time'
+            plot_title_y = 'Y coordinates vs Time'
+        
+        fig = plt.figure(figsize=(12,7))
+        fig.subplots_adjust(hspace=0.5, wspace=0.2)
+        
+        plt.subplot(3, 2, 1)
+        plt.plot(x_axis ,X_values)
+        plt.xlabel(x_label)
+        plt.ylabel('X coordinates')
+        plt.title(plot_title_x)
+
+        plt.subplot(3, 2, 3)
+        plt.scatter( x_axis ,X_values)
+        plt.xlabel(x_label)
+        plt.ylabel('X coordinates')
+        plt.title(plot_title_x +' scatter plot')
+
+        plt.subplot(3, 2, 5)
+        plt.hist(X_values, color = 'blue', edgecolor = 'black',bins = len(X_values))
+        plt.xlabel('X coordinates')
+        plt.ylabel('Count')
+        plt.title('Histogram of X coordinates')
+
+        plt.subplot(3, 2, 2)
+        plt.plot(x_axis ,Y_values)
+        plt.xlabel(x_label)
+        plt.ylabel('Y coordinates')
+        plt.title(plot_title_y)
+
+        plt.subplot(3, 2, 4)
+        plt.scatter( x_axis, Y_values)
+        plt.xlabel(x_label)
+        plt.ylabel('Y coordinates')
+        plt.title(plot_title_y +' scatter plot')
+
+        plt.subplot(3, 2, 6)
+        plt.hist(Y_values, color = 'blue', edgecolor = 'black',bins = len(X_values))
+        plt.xlabel('Y coordinates')
+        plt.ylabel('Count')
+        plt.title('Histogram of Y coordinates')
+
+        plt.show()
+
+    label1_value_plotter = Label(value_plotter_window , text = 'Select The X and Y values for Plotting' , 
+                                fg='red',bg='yellow',font=("arial" , 16 , "bold"),relief='solid')
+    label1_value_plotter.pack()
+    button1_value_plotter = Button(value_plotter_window , text="Select X values" , bg="orange" , fg="black" ,
+                                    command = value_plotter_x_values , state=NORMAL , width = 20 , 
+                                    font=("arial" , 10 , "bold"))
+    button1_value_plotter.place(x = 120 , y = 50)
+    button2_value_plotter = Button(value_plotter_window , text="Select Y Values" , bg="orange" , fg="black" ,
+                      command = value_plotter_y_values , state=NORMAL , width = 20 , 
+                      font=("arial" , 10 , "bold"))
+    button2_value_plotter.place(x = 120 , y = 100)
+    button3_value_plotter = Button(value_plotter_window , text="Select Time Values" , bg="orange" , fg="black" ,
+                      command = value_plotter_time_values , state=NORMAL , width = 20 , 
+                      font=("arial" , 10 , "bold"))
+    button3_value_plotter.place(x = 120 , y = 150)
+    button4_value_plotter = Button(value_plotter_window , text="Plot" , bg="orange" , fg="black" ,
+                      command = value_plot , state=DISABLED , width = 20 , 
+                      font=("arial" , 10 , "bold"))
+    button4_value_plotter.place(x = 120 , y = 200)
+
+    checkbutton1_value_plotter = Checkbutton(value_plotter_window , text='Vs Time' , variable=var_c1 , 
+                                             state = DISABLED)
+    checkbutton1_value_plotter.place(x=300,y=150)
+
+def Allan_Deviation_Plotter():
     pass
 
 label1_main = Label(main_window , text = 'Please Read The Use Instructions in Help Menu' , 
@@ -315,10 +452,15 @@ radiobutton2_main = Radiobutton(main_window , text = 'Use video',variable=camera
 radiobutton2_main.pack()
 spinbox1_main = Spinbox(main_window,from_=0,to=5,width=2)
 spinbox1_main.place(x = 300 , y = 60)
-button2_main = Button(main_window , text="Open Plotter" , bg="orange" , fg="black" ,
-                      command = Plotter , state=NORMAL , width = 20 ,
+button2_main = Button(main_window , text="Value Plotter" , bg="orange" , fg="black" ,
+                      command = Value_Plotter , state=NORMAL , width = 20 ,
                       font=("arial" , 10 , "bold"))
-button2_main.pack() 
+button2_main.place(x = 50 , y = 110) 
+
+button3_main = Button(main_window , text="ADEV Plotter" , bg="orange" , fg="black" ,
+                      command = Allan_Deviation_Plotter , state=NORMAL , width = 20 ,
+                      font=("arial" , 10 , "bold"))
+button3_main.place(x = 280 , y = 110) 
 
 
 menu = Menu(main_window)
