@@ -113,6 +113,8 @@ def TrackerChooser():
     Tracker_used = OPENCV_OBJECT_TRACKERS[tracker.get()]()
     print(Tracker_used)
 
+def otherAlgorithmChooser():
+    print(tracker.get())
 
 #########################################################################################################
 # TRACKER WINDOW STARTS
@@ -149,29 +151,29 @@ def StartTracking():
         global collection , draw
         global pos_x , pos_y
         ret , frame = cap.read()
-        frame = cv2.resize(frame, (800, 600), interpolation = cv2.INTER_LINEAR)
+        # frame = cv2.resize(frame, (800, 600), interpolation = cv2.INTER_LINEAR)
         if ret == True:
             color_index = 0
             if camera.get() == 0:
-                frame = cv2.flip(frame, 1)
-            (_, boxes) = trackers.update(frame)
+                frame = cv2.flip(frame, 1) 
 
+            (_, boxes) = trackers.update(frame)
             for box in boxes:
                 color_index+=1
                 (x, y, w, h) = [int(v) for v in box]
-                cv2.rectangle(frame, (x, y), (x + w, y + h), random_colours[color_index], 2)
-                cv2.circle(frame , (x+w/2,y+h/2) , 4 , random_colours[color_index] , -1)
+                cv2.rectangle(frame, (x, y), (x + w, y + h), (int(random_colours[color_index][0]),int(random_colours[color_index][1]),int(random_colours[color_index][2])), 2)
+                cv2.circle(frame , (int(x+w/2),int(y+h/2)) , 4 , (int(random_colours[color_index][0]),int(random_colours[color_index][1]),int(random_colours[color_index][2])) , -1)
 
                 if draw == True:
-                    cv2.line(frame , (0,fy+fh/2) , (int(width),fy+fh/2) , (255,0,0) , 3)
-                    cv2.line(frame , (fx+fw/2,0) , (fx+fw/2,int(height)) , (255,0,0) , 3)
-                    cv2.line(black_background , (0,fy+fh/2) , (int(width),fy+fh/2) , (255,0,0) , 3)
-                    cv2.line(black_background , (fx+fw/2,0) , (fx+fw/2,int(height)) , (255,0,0) , 3)
+                    cv2.line(frame , (0,int(fy+fh/2)) , (int(width),int(fy+fh/2)) , (255,0,0) , 3)
+                    cv2.line(frame , (int(fx+fw/2),0) , (int(fx+fw/2),int(height)) , (255,0,0) , 3)
+                    cv2.line(black_background , (0,int(fy+fh/2)) , (int(width),int(fy+fh/2)) , (255,0,0) , 3)
+                    cv2.line(black_background , (int(fx+fw/2),0) , (int(fx+fw/2),int(height)) , (255,0,0) , 3)
 
                 if collection == True:
                     pos_x.append(((x+w/2)-ox))
                     pos_y.append((oy-(y+h/2)))
-                    cv2.circle(black_background , (x+w/2,y+h/2) , 2 , (255,255,255) , -1)
+                    cv2.circle(black_background , (int(x+w/2),int(y+h/2)) , 2 , (255,255,255) , -1)
 
             cv2image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             img = PIL.Image.fromarray(cv2image)
@@ -252,7 +254,7 @@ def StartTracking():
             np.save(path_y , pos_y)
             np.save(path_time , total_time)
             cv2.imwrite(path_background,black_background)
-            tkinter.messagebox.showerror("Saving" , "Done Saving")
+            tkinter.messagebox.showinfo("Saving" , "Done Saving")
             
 
         label1_save_window = Label(save_window , text = 'If You Want to save the data then select the directory \n  Enter The Name of the files along with Extensions' , 
@@ -466,6 +468,7 @@ def Value_Plotter():
 # ALLAN DEVIATION PLOTTER WINDOW STARTS
 
 def Allan_Deviation_Plotter():
+    pass
     ad_plotter_window = Toplevel()
     ad_plotter_window.geometry("400x350") # width*height
     ad_plotter_window.title("Plotting Window")
@@ -637,9 +640,18 @@ trackers_menu.add_radiobutton(label="MEDIANFLOW", command=TrackerChooser,
 trackers_menu.add_radiobutton(label="MOSSE", command=TrackerChooser,
                                 variable=tracker,value="mosse")
 
-trackers_menu.add_separator()
-trackers_menu.add_radiobutton(label="HSV Tracking", command=TrackerChooser,
-                                variable=tracker,value="Male")
+other_algorithms = Menu(menu)
+menu.add_cascade(label="Other Algorithms", menu=other_algorithms)
+other_algorithms.add_radiobutton(label="HSV Tracking" ,command=otherAlgorithmChooser,
+                                variable=tracker,value="hsv")
+other_algorithms.add_radiobutton(label="Cam Shift", command=otherAlgorithmChooser,
+                                variable=tracker,value="cam")
+other_algorithms.add_radiobutton(label="Homography", command=otherAlgorithmChooser,
+                                variable=tracker,value="homography")
+other_algorithms.add_radiobutton(label="Dlib Coorelation", command=otherAlgorithmChooser,
+                                variable=tracker,value="dlib")
+other_algorithms.add_radiobutton(label="Optical Flow", command=otherAlgorithmChooser,
+                                variable=tracker,value="optical")
 
 help_menu = Menu(menu)
 menu.add_cascade(label="Help", menu=help_menu)
