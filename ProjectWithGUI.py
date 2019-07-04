@@ -12,6 +12,7 @@ import time
 import tkinter.messagebox
 import matplotlib.pyplot as plt
 import allantools
+import dlib
 #########################################################################################################
 
 #########################################################################################################
@@ -51,7 +52,10 @@ collection = False
 draw = False
 pos_x = []
 pos_y = []   
-
+dlib_tracking = False
+dlib_tracker = dlib.correlation_tracker()
+cv2image = 0
+(startX, startY, endX, endY) = (0,0,0,0)
 # save window global variables
 
 # value plotter global variables
@@ -120,6 +124,7 @@ def otherAlgorithmChooser():
 # TRACKER WINDOW STARTS
 def StartTracking():
 
+    global cap
     tracker_window = Toplevel()
     tracker_window.geometry("800x700") # width*height
     tracker_window.title("Tracking Window")
@@ -150,32 +155,66 @@ def StartTracking():
         global fx,fy,fw,fh,x,y,w,h,ox,oy
         global collection , draw
         global pos_x , pos_y
+        global dlib_tracking , dlib_tracker
+        global cv2image
+        global startX, startY, endX, endY
+        global cap 
+
         ret , frame = cap.read()
         # frame = cv2.resize(frame, (800, 600), interpolation = cv2.INTER_LINEAR)
         if ret == True:
             color_index = 0
             if camera.get() == 0:
                 frame = cv2.flip(frame, 1) 
+            if tracker.get() == 'dlib':
+                cv2image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                if dlib_tracking:
+                    dlib_tracker.update(cv2image)
+                    pos = dlib_tracker.get_position()
+                    # unpack the position object
+                    # startX = int(pos.left())
+                    # startY = int(pos.top())
+                    x = int(pos.left())
+                    y = int(pos.top())
+                    endX = int(pos.right())
+                    endY = int(pos.bottom())
+                    w = endX-x
+                    h =  endY-y
+                    cv2.rectangle(cv2image, (x, y), (x + w, y + h),(0, 255, 0), 2)
+                    cv2.circle(cv2image, (int(x+w/2),int(y+h/2)) , 4 ,(255, 255, 0), -1)
 
-            (_, boxes) = trackers.update(frame)
-            for box in boxes:
-                color_index+=1
-                (x, y, w, h) = [int(v) for v in box]
-                cv2.rectangle(frame, (x, y), (x + w, y + h), (int(random_colours[color_index][0]),int(random_colours[color_index][1]),int(random_colours[color_index][2])), 2)
-                cv2.circle(frame , (int(x+w/2),int(y+h/2)) , 4 , (int(random_colours[color_index][0]),int(random_colours[color_index][1]),int(random_colours[color_index][2])) , -1)
+                    if draw == True:
+                        cv2.line(cv2image , (0,int(fy+fh/2)) , (int(width),int(fy+fh/2)) , (255,0,0) , 3)
+                        cv2.line(cv2image , (int(fx+fw/2),0) , (int(fx+fw/2),int(height)) , (255,0,0) , 3)
+                        cv2.line(black_background , (0,int(fy+fh/2)) , (int(width),int(fy+fh/2)) , (255,0,0) , 3)
+                        cv2.line(black_background , (int(fx+fw/2),0) , (int(fx+fw/2),int(height)) , (255,0,0) , 3)
 
-                if draw == True:
-                    cv2.line(frame , (0,int(fy+fh/2)) , (int(width),int(fy+fh/2)) , (255,0,0) , 3)
-                    cv2.line(frame , (int(fx+fw/2),0) , (int(fx+fw/2),int(height)) , (255,0,0) , 3)
-                    cv2.line(black_background , (0,int(fy+fh/2)) , (int(width),int(fy+fh/2)) , (255,0,0) , 3)
-                    cv2.line(black_background , (int(fx+fw/2),0) , (int(fx+fw/2),int(height)) , (255,0,0) , 3)
+                    if collection == True:
+                        pos_x.append(((x+w/2)-ox))
+                        pos_y.append((oy-(y+h/2)))
+                        cv2.circle(black_background , (int(x+w/2),int(y+h/2)) , 2 , (255,255,255) , -1)
 
-                if collection == True:
-                    pos_x.append(((x+w/2)-ox))
-                    pos_y.append((oy-(y+h/2)))
-                    cv2.circle(black_background , (int(x+w/2),int(y+h/2)) , 2 , (255,255,255) , -1)
+            else:
+                (_, boxes) = trackers.update(frame)
+                for box in boxes:
+                    color_index+=1
+                    (x, y, w, h) = [int(v) for v in box]
+                    cv2.rectangle(frame, (x, y), (x + w, y + h), (int(random_colours[color_index][0]),int(random_colours[color_index][1]),int(random_colours[color_index][2])), 2)
+                    cv2.circle(frame , (int(x+w/2),int(y+h/2)) , 4 , (int(random_colours[color_index][0]),int(random_colours[color_index][1]),int(random_colours[color_index][2])) , -1)
 
-            cv2image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                    if draw == True:
+                        cv2.line(frame , (0,int(fy+fh/2)) , (int(width),int(fy+fh/2)) , (255,0,0) , 3)
+                        cv2.line(frame , (int(fx+fw/2),0) , (int(fx+fw/2),int(height)) , (255,0,0) , 3)
+                        cv2.line(black_background , (0,int(fy+fh/2)) , (int(width),int(fy+fh/2)) , (255,0,0) , 3)
+                        cv2.line(black_background , (int(fx+fw/2),0) , (int(fx+fw/2),int(height)) , (255,0,0) , 3)
+
+                    if collection == True:
+                        pos_x.append(((x+w/2)-ox))
+                        pos_y.append((oy-(y+h/2)))
+                        cv2.circle(black_background , (int(x+w/2),int(y+h/2)) , 2 , (255,255,255) , -1)
+
+                cv2image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+
             img = PIL.Image.fromarray(cv2image)
             imgtk = ImageTk.PhotoImage(image=img)
             lmain.imgtk = imgtk
@@ -194,12 +233,28 @@ def StartTracking():
 
     def select():
         global frame
-        box = cv2.selectROI("Selector", frame, fromCenter=False,
-                            showCrosshair=True)
-        tracker_trackingwindow = Tracker_used
-        trackers.add(tracker_trackingwindow, frame, box)
-        cv2.destroyWindow('Selector')
-        button3_tracking.configure(state = NORMAL)
+        global dlib_tracking , dlib_tracker
+        global cv2image
+        global startX, startY, endX, endY
+
+        if tracker.get() == 'dlib':
+            dlib_tracking = True
+            initBoundingBox = cv2.selectROI("Selector", frame, fromCenter=False,showCrosshair=True)
+            cv2.destroyWindow('Selector')
+            (x1,y1,w1,h1) = initBoundingBox
+            (startX, startY, endX, endY) = (x1,y1,x1+w1,y1+h1)
+            rect = dlib.rectangle(startX, startY, endX, endY)
+            dlib_tracker.start_track(cv2image, rect)
+            cv2.rectangle(frame, (startX, startY), (endX, endY),(0, 255, 0), 2)
+            button3_tracking.configure(state = NORMAL)
+
+        else:
+            box = cv2.selectROI("Selector", frame, fromCenter=False,
+                                showCrosshair=True)
+            tracker_trackingwindow = Tracker_used
+            trackers.add(tracker_trackingwindow, frame, box)
+            cv2.destroyWindow('Selector')
+            button3_tracking.configure(state = NORMAL)
 
     def drawing():
         global fx,fy,fw,fh,x,y,w,h,ox,oy
@@ -609,7 +664,6 @@ button3_main = Button(main_window , text="ADEV Plotter" , bg="orange" , fg="blac
                       command = Allan_Deviation_Plotter , state=NORMAL , width = 20 ,
                       font=("arial" , 10 , "bold"))
 button3_main.place(x = 280 , y = 110) 
-
 
 menu = Menu(main_window)
 main_window.config(menu=menu)
