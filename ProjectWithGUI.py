@@ -56,6 +56,7 @@ dlib_tracking = False
 dlib_tracker = dlib.correlation_tracker()
 cv2image = 0
 (startX, startY, endX, endY) = (0,0,0,0)
+(h1w,s1w,v1w,h2w,s2w,v2w) = (0,0,0,0,0,0)
 # save window global variables
 
 # value plotter global variables
@@ -90,6 +91,10 @@ def OpenFile():
     print(load_path)
     enable_tracking = True
     button1_main.configure(state=NORMAL)
+    if load_path != '':
+        other_algorithms.entryconfig(1 , state = NORMAL)
+    else:
+        other_algorithms.entryconfig(1 , state = DISABLED)
 
 def SaveFile():
     global save_path
@@ -118,8 +123,100 @@ def TrackerChooser():
     print(Tracker_used)
 
 def otherAlgorithmChooser():
+    global h1w,s1w,v1w,h2w,s2w,v2w
     print(tracker.get())
 
+    if tracker.get() == 'hsv':
+        if camera.get() == 0:
+            capu = cv2.VideoCapture(int(spinbox1_main.get()))
+        elif camera.get() == 1:
+            capu = cv2.VideoCapture(load_path)
+        #naming a window for object tracking
+        cv2.namedWindow('SettingHSV')
+
+        #defining the nothing function
+        def nothing():
+            pass
+
+        #creating trackbars
+        cv2.createTrackbar('h1w','SettingHSV',0,255,nothing)
+        cv2.createTrackbar('s1w','SettingHSV',0,255,nothing)
+        cv2.createTrackbar('v1w','SettingHSV',0,255,nothing)
+        cv2.createTrackbar('h2w','SettingHSV',0,255,nothing)
+        cv2.createTrackbar('s2w','SettingHSV',0,255,nothing)
+        cv2.createTrackbar('v2w','SettingHSV',0,255,nothing)
+
+        while(capu.isOpened()):
+            ret , frames = capu.read()
+            if ret == True:
+                if camera.get() == 0:
+                    frames = cv2.flip(frames , 1)
+
+                #blurring the image
+                blur = cv2.GaussianBlur(frames, (11, 11), 20)
+
+                #converting brg to hsv
+                hsv = cv2.cvtColor(blur,cv2.COLOR_BGR2HSV)
+
+                #getting the input from the trackbars
+                h1w=cv2.getTrackbarPos('h1w','SettingHSV')
+                s1w=cv2.getTrackbarPos('s1w','SettingHSV')
+                v1w=cv2.getTrackbarPos('v1w','SettingHSV')
+                h2w=cv2.getTrackbarPos('h2w','SettingHSV')
+                s2w=cv2.getTrackbarPos('s2w','SettingHSV')
+                v2w=cv2.getTrackbarPos('v2w','SettingHSV')
+
+                #define range of the color object
+                lower_blue = np.array([h1w,s1w,v1w])
+                upper_blue = np.array([h2w,s2w,v2w])
+
+                #thresholding the image to get only white colors by creating a mask
+                mask = cv2.inRange(hsv,lower_blue,upper_blue)
+
+                #performing morphological operations on mask
+                kernelforerosion = np.ones((5,5) , np.uint8)
+                erodedmask = cv2.erode(mask,kernelforerosion,iterations = 1)
+
+                #using bitwiseand to do the mask
+                result = cv2.bitwise_and(blur,blur,mask = erodedmask)
+
+                #for finding and drawing contours
+                _,contours,_ = cv2.findContours(erodedmask,cv2.RETR_TREE,cv2.CHAIN_APPROX_SIMPLE)
+                frameswithcontours = cv2.drawContours(result,contours,-1,(0,255,0),4)
+
+                #getting the centoid of the image
+                if(len(contours)!=0):
+                    cnt = contours[0]
+                    M = cv2.moments(cnt)
+                    if (M['m00']!=0):
+                        cx = int(M['m10']/M['m00'])
+                        cy = int(M['m01']/M['m00'])
+
+                        #drawing a circle at the centroid of the shape
+                        cv2.circle(result,(cx,cy),5,(0,0,255),-1)
+
+                #displaying the video
+                cv2.imshow('SettingHSV',mask)
+                cv2.imshow('resultant',result)
+
+                #setting esc key to end the process
+                if camera.get() == 0:
+                    k=cv2.waitKey(1) & 0xFF
+                else:
+                    k=cv2.waitKey(0) & 0xFF
+
+                if k == 27 :
+                    break
+                if k == 2555904:
+                    ret, frames = capu.read()
+            else:
+                break    
+
+        #to release camera and destroy all windows
+        capu.release()
+        cv2.destroyAllWindows()
+
+    
 #########################################################################################################
 # TRACKER WINDOW STARTS
 def StartTracking():
@@ -158,7 +255,9 @@ def StartTracking():
         global dlib_tracking , dlib_tracker
         global cv2image
         global startX, startY, endX, endY
-        global cap 
+        # global cap 
+        global initialization_hsv
+        global h1w,s1w,v1w,h2w,s2w,v2w
 
         ret , frame = cap.read()
         # frame = cv2.resize(frame, (800, 600), interpolation = cv2.INTER_LINEAR)
@@ -171,9 +270,6 @@ def StartTracking():
                 if dlib_tracking:
                     dlib_tracker.update(cv2image)
                     pos = dlib_tracker.get_position()
-                    # unpack the position object
-                    # startX = int(pos.left())
-                    # startY = int(pos.top())
                     x = int(pos.left())
                     y = int(pos.top())
                     endX = int(pos.right())
@@ -193,6 +289,10 @@ def StartTracking():
                         pos_x.append(((x+w/2)-ox))
                         pos_y.append((oy-(y+h/2)))
                         cv2.circle(black_background , (int(x+w/2),int(y+h/2)) , 2 , (255,255,255) , -1)
+
+            elif tracker.get() == 'hsv':
+                print(h1w,s1w,v1w,h2w,s2w,v2w)
+                cv2image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 
             else:
                 (_, boxes) = trackers.update(frame)
@@ -276,7 +376,7 @@ def StartTracking():
 #########################################################################################################
 # SAVE WINDOW STARTS
     def exitt():
-        global end_time , total_time
+        global end_time , total_time 
         end_time = time.time()
         total_time = end_time-start_time
         print(pos_x)
@@ -300,7 +400,6 @@ def StartTracking():
 
         def saving_the_files():
             path_x = save_path + '//' + entry1_save_window.get()
-            print(path_x)
             path_y = save_path + '//' + entry2_save_window.get()
             path_background = save_path + '//' + entry3_save_window.get()
             path_time = save_path + '//' + entry4_save_window.get()
@@ -388,6 +487,10 @@ def StartTracking():
 def switch():
     if camera.get() == 1:
         spinbox1_main.configure(state=DISABLED)
+        if load_path == '':
+            other_algorithms.entryconfig(1 , state = DISABLED)
+        else:
+            other_algorithms.entryconfig(1 , state = NORMAL)
         if enable_tracking == True:
             button1_main.configure(state=NORMAL)
         else:
@@ -395,6 +498,7 @@ def switch():
     else:
         spinbox1_main.configure(state=NORMAL)
         button1_main.configure(state=NORMAL)
+        other_algorithms.entryconfig(1 , state = NORMAL)
 
 
 #########################################################################################################
@@ -523,7 +627,6 @@ def Value_Plotter():
 # ALLAN DEVIATION PLOTTER WINDOW STARTS
 
 def Allan_Deviation_Plotter():
-    pass
     ad_plotter_window = Toplevel()
     ad_plotter_window.geometry("400x350") # width*height
     ad_plotter_window.title("Plotting Window")
@@ -697,11 +800,9 @@ trackers_menu.add_radiobutton(label="MOSSE", command=TrackerChooser,
 other_algorithms = Menu(menu)
 menu.add_cascade(label="Other Algorithms", menu=other_algorithms)
 other_algorithms.add_radiobutton(label="HSV Tracking" ,command=otherAlgorithmChooser,
-                                variable=tracker,value="hsv")
+                                variable=tracker,value="hsv" , state = NORMAL)
 other_algorithms.add_radiobutton(label="Cam Shift", command=otherAlgorithmChooser,
                                 variable=tracker,value="cam")
-other_algorithms.add_radiobutton(label="Homography", command=otherAlgorithmChooser,
-                                variable=tracker,value="homography")
 other_algorithms.add_radiobutton(label="Dlib Coorelation", command=otherAlgorithmChooser,
                                 variable=tracker,value="dlib")
 other_algorithms.add_radiobutton(label="Optical Flow", command=otherAlgorithmChooser,
