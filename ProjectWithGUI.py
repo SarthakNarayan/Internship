@@ -1,3 +1,5 @@
+#########################################################################################################
+# IMPORTS SECTION
 import cv2
 import tkinter
 from tkinter import *
@@ -10,9 +12,10 @@ import time
 import tkinter.messagebox
 import matplotlib.pyplot as plt
 import allantools
+#########################################################################################################
 
 #########################################################################################################
-# Creating the main window with menu
+# MAIN WINDOW STARTS
 main_window = Tk()
 main_window.geometry("500x150")
 main_window.title("Tracking Program")
@@ -28,7 +31,8 @@ def center_window(width=300, height=200):
     main_window.geometry('%dx%d+%d+%d' % (width, height, x, y))
 
 center_window(500, 150)
-#########################################################################################################
+
+####################################################
 # main window global variables
 tracker = StringVar()
 Tracker_used = cv2.TrackerCSRT_create()
@@ -64,14 +68,16 @@ loaded_time = ''
 value_type = IntVar()
 adplotter_path = ''
 adplotter_values = ''
-#########################################################################################################
+####################################################
 
+####################################################
 # setting values
 camera.set(0)
 spinbox1_main.set('0')
 tracker.set('csrt')
 var_c1.set(0)
 value_type.set(0)
+####################################################
 
 # opening a file using a dialog box
 def OpenFile():
@@ -108,7 +114,8 @@ def TrackerChooser():
     print(Tracker_used)
 
 
-# Main Tracking Algorithm
+#########################################################################################################
+# TRACKER WINDOW STARTS
 def StartTracking():
 
     tracker_window = Toplevel()
@@ -209,7 +216,8 @@ def StartTracking():
         pos_x = []
         pos_y = []
 
-    # Exit will also enable entry to save window
+#########################################################################################################
+# SAVE WINDOW STARTS
     def exitt():
         global end_time , total_time
         end_time = time.time()
@@ -287,6 +295,8 @@ def StartTracking():
                       width = 15)
         button2_saving.place(x = 230 , y = 250)
 
+# SAVE WINDOW ENDS
+#########################################################################################################
 
     # disabling cross
     def disable_cross():
@@ -314,6 +324,9 @@ def StartTracking():
     tracker_window.protocol("WM_DELETE_WINDOW", disable_cross)
     tracker_window.mainloop()
 
+# TRACKER WINDOW ENDS
+#########################################################################################################
+
 # Logic for enabling and disabling boxes
 def switch():
     if camera.get() == 1:
@@ -325,6 +338,10 @@ def switch():
     else:
         spinbox1_main.configure(state=NORMAL)
         button1_main.configure(state=NORMAL)
+
+
+#########################################################################################################
+# VALUE PLOTTER WINDOW STARTS
 
 def Value_Plotter():
     value_plotter_window = Toplevel()
@@ -441,6 +458,12 @@ def Value_Plotter():
                                              state = DISABLED)
     checkbutton1_value_plotter.place(x=300,y=150)
 
+# PLOTTER WINDOW ENDS
+#########################################################################################################
+
+
+#########################################################################################################
+# ALLAN DEVIATION PLOTTER WINDOW STARTS
 
 def Allan_Deviation_Plotter():
     ad_plotter_window = Toplevel()
@@ -459,39 +482,39 @@ def Allan_Deviation_Plotter():
             plt.grid(color='red')
 
     def plot_adplotter():
-        # try:
-        rate = int(entry1_adplotter.get())
-        if value_type.get() == 0:
-            title = 'Allan Deviation for X values'
-        elif value_type.get() == 1:
-            title = 'Allan Deviation for Y values'
-        (tau2, ad, _ , _ ) = allantools.oadev(adplotter_values, rate=rate, data_type="freq", taus=tau1)
+        try:
+            rate = int(entry1_adplotter.get())
+            if value_type.get() == 0:
+                title = 'Allan Deviation for X values'
+            elif value_type.get() == 1:
+                title = 'Allan Deviation for Y values'
+            (tau2, ad, _ , _ ) = allantools.oadev(adplotter_values, rate=rate, data_type="freq", taus=tau1)
 
-        idx_min = np.argmin(ad)
-        idx_max = np.argmax(ad)
-        allandeviation_minimum_value = ad[idx_min] 
-        allandeviation_maximum_value = ad[idx_max]
-        tau_min = tau2[idx_min]
-        tau_max = tau2[idx_max]
+            idx_min = np.argmin(ad)
+            idx_max = np.argmax(ad)
+            allandeviation_minimum_value = ad[idx_min] 
+            allandeviation_maximum_value = ad[idx_max]
+            tau_min = tau2[idx_min]
+            tau_max = tau2[idx_max]
 
-        t21_ind1 = np.where(tau2==1.0) # index of array t2 where the value is 1s.
-        noise = ad[t21_ind1[0]]
-        # noise density is value of ADEV curve at 1s averaging time.
+            t21_ind1 = np.where(tau2==1.0) # index of array t2 where the value is 1s.
+            noise = ad[t21_ind1[0]]
+            # noise density is value of ADEV curve at 1s averaging time.
 
-        label8_adplotter.configure(text = str(allandeviation_minimum_value))
-        label9_adplotter.configure(text = str(allandeviation_maximum_value))
-        label10_adplotter.configure(text = str(tau_min))
-        label11_adplotter.configure(text = str(tau_max))
-        label12_adplotter.configure(text = str(noise))
+            label8_adplotter.configure(text = str(allandeviation_minimum_value))
+            label9_adplotter.configure(text = str(allandeviation_maximum_value))
+            label10_adplotter.configure(text = str(tau_min))
+            label11_adplotter.configure(text = str(tau_max))
+            label12_adplotter.configure(text = str(noise))
 
-        plt.loglog(tau2, ad,c=np.random.rand(3,))
-        plt.title(title)
-        plt.xlabel('tau')
-        plt.ylabel('ADEV [V]')
-        plt.show()
+            plt.loglog(tau2, ad,c=np.random.rand(3,))
+            plt.title(title)
+            plt.xlabel('tau')
+            plt.ylabel('ADEV [V]')
+            plt.show()
 
-        # except:
-            # tkinter.messagebox.showerror('Rate Error' , 'Choose a larger or a smaller rate')
+        except:
+            tkinter.messagebox.showerror('Rate Error' , 'Choose a larger or a smaller rate')
 
     label1_adplotter = Label(ad_plotter_window , text = 'Select X or Y for Allan Deviation' , 
                     fg='red',bg='yellow',font=("arial" , 16 , "bold"),relief='solid')
@@ -554,6 +577,9 @@ def Allan_Deviation_Plotter():
     label12_adplotter = Label(ad_plotter_window , text = '' , 
                     fg='red',bg='yellow',font=("arial" , 8 , "bold"),relief='solid')
     label12_adplotter.place(x = 250 , y = 320)
+
+# ALLAN DEVIATION PLOTTER WINDOW ENDS
+#########################################################################################################
 
 
 label1_main = Label(main_window , text = 'Please Read The Use Instructions in Help Menu' , 
@@ -621,7 +647,8 @@ help_menu.add_command(label="Use Instrcutions", command=Use)
 help_menu.add_command(label="Tracker Info ", command=Info)
 help_menu.add_command(label="About", command=About)
 
-#########################################################################################################
-
 main_window.resizable(width=FALSE, height=FALSE)
 main_window.mainloop()
+
+# MAIN WINDOW ENDS
+#########################################################################################################
