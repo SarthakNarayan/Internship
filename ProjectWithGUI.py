@@ -13,6 +13,7 @@ import tkinter.messagebox
 import matplotlib.pyplot as plt
 import allantools
 import dlib
+import tkinter.ttk as ttk
 #########################################################################################################
 
 #########################################################################################################
@@ -57,6 +58,10 @@ dlib_tracker = dlib.correlation_tracker()
 cv2image = 0
 (startX, startY, endX, endY) = (0,0,0,0)
 (h1w,s1w,v1w,h2w,s2w,v2w) = (0,0,0,0,0,0)
+var_c1_hsv = StringVar()
+var_c2_hsv = StringVar()
+(cx , cy) = (0,0)
+var_c3_hsv = StringVar()
 # save window global variables
 
 # value plotter global variables
@@ -82,6 +87,9 @@ spinbox1_main.set('0')
 tracker.set('csrt')
 var_c1.set(0)
 value_type.set(0)
+var_c1_hsv.set(1)
+var_c2_hsv.set(0)
+var_c3_hsv.set(0)
 ####################################################
 
 # opening a file using a dialog box
@@ -222,9 +230,33 @@ def otherAlgorithmChooser():
 def StartTracking():
 
     global cap
-    tracker_window = Toplevel()
-    tracker_window.geometry("800x700") # width*height
-    tracker_window.title("Tracking Window")
+    if tracker.get() == 'hsv':
+        hsv_tracker_window = Toplevel()
+        hsv_tracker_window.geometry("800x700") # width*height
+        hsv_tracker_window.title("HSV Tracking Window")
+
+        entry1_hsv_tracker = Entry(hsv_tracker_window , width = 5)
+        entry1_hsv_tracker.place(x = 300 , y = 500)
+        entry1_hsv_tracker.insert(END, '100')
+
+        combo = ttk.Combobox(hsv_tracker_window)
+        combo['values']=("None","erosion","dilation","opening","closing")
+        # Setting the seleted item
+        combo.current(0)
+        combo.place(x = 400 , y = 600)
+
+        entry2_hsv_tracker = Entry(hsv_tracker_window , width = 3)
+        entry2_hsv_tracker.place(x = 300 , y = 550)
+        entry2_hsv_tracker.insert(END, '5')
+
+        entry3_hsv_tracker = Entry(hsv_tracker_window , width = 3 , state = DISABLED)
+        entry3_hsv_tracker.place(x = 300 , y = 650)
+        entry3_hsv_tracker.insert(END, '1')
+
+    else:
+        tracker_window = Toplevel()
+        tracker_window.geometry("800x700") # width*height
+        tracker_window.title("Tracking Window")
 
     trackers = cv2.MultiTracker_create()
     if camera.get() == 0:
@@ -244,8 +276,12 @@ def StartTracking():
     color_index = 0
     start_time = 0
 
-    lmain = Label(tracker_window)
-    lmain.grid(row = 0 , column = 0)
+    if tracker.get() == 'hsv':
+        lmain = Label(hsv_tracker_window)
+        lmain.grid(row = 0 , column = 0)
+    else:
+        lmain = Label(tracker_window)
+        lmain.grid(row = 0 , column = 0)
 
     def show_frame():
         global frame
@@ -258,6 +294,7 @@ def StartTracking():
         # global cap 
         global initialization_hsv
         global h1w,s1w,v1w,h2w,s2w,v2w
+        global cx,cy
 
         ret , frame = cap.read()
         # frame = cv2.resize(frame, (800, 600), interpolation = cv2.INTER_LINEAR)
@@ -291,9 +328,75 @@ def StartTracking():
                         cv2.circle(black_background , (int(x+w/2),int(y+h/2)) , 2 , (255,255,255) , -1)
 
             elif tracker.get() == 'hsv':
-                print(h1w,s1w,v1w,h2w,s2w,v2w)
-                cv2image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                if int(var_c1_hsv.get()) == 1:
+                    frame = cv2.GaussianBlur(frame, (11, 11), 20)
+                
+                hsv = cv2.cvtColor(frame,cv2.COLOR_BGR2HSV)
+                lower_range = np.array([h1w,s1w,v1w])
+                upper_range = np.array([h2w,s2w,v2w])
+                mask = cv2.inRange(hsv,lower_range,upper_range)
 
+                try:
+                    kernel = int(entry2_hsv_tracker.get())
+                    kernelforerosion = np.ones((kernel,kernel) , np.uint8)
+                except:
+                    kernelforerosion = np.ones((5,5) , np.uint8)
+
+                if combo.get() == 'erosion':
+                    try:
+                        mask = cv2.erode(mask , kernelforerosion , iterations = int(entry3_hsv_tracker.get()))
+                    except:
+                        mask = cv2.erode(mask , kernelforerosion , iterations = 1)
+                    entry3_hsv_tracker.configure(state = NORMAL)
+                if combo.get() == 'dilation':
+                    try:
+                        mask = cv2.dilate(mask , kernelforerosion , iterations = int(entry3_hsv_tracker.get()))
+                    except:
+                        mask = cv2.dilate(mask , kernelforerosion , iterations = 1)
+                    entry3_hsv_tracker.configure(state = NORMAL)
+                if combo.get() == 'opening':
+                    mask = cv2.morphologyEx(mask , cv2.MORPH_OPEN , kernelforerosion)  
+                    entry3_hsv_tracker.configure(state = DISABLED)
+                if combo.get() == 'closing':
+                    mask = cv2.morphologyEx(mask , cv2.MORPH_CLOSE , kernelforerosion) 
+                    entry3_hsv_tracker.configure(state = DISABLED)
+
+                result = cv2.bitwise_and(frame,frame,mask = mask)
+                # cv2image = cv2.cvtColor(result, cv2.COLOR_BGR2RGB)
+                _,contours,_ = cv2.findContours(mask,cv2.RETR_TREE,cv2.CHAIN_APPROX_SIMPLE)
+                for i , contour in enumerate(contours):
+                    area = cv2.contourArea(contour)
+                    if area > int(entry1_hsv_tracker.get()):
+                        frameswithcontours = cv2.drawContours(frame,contours,i,(0,255,0),2)
+                        result = cv2.drawContours(result,contours,i,(0,255,0),2)
+                        cnt = contours[i]
+                        M = cv2.moments(cnt)
+                        cx = int(M['m10']/M['m00'])
+                        cy = int(M['m01']/M['m00'])
+                        cv2.circle(frameswithcontours,(cx,cy),4,(255,0,0),-1)
+                        cv2.circle(result,(cx,cy),4,(255,0,0),-1)
+
+                if int(var_c3_hsv.get()) == 0:
+                    try:        
+                        cv2image = cv2.cvtColor(frameswithcontours, cv2.COLOR_BGR2RGB)
+                    except:
+                        cv2image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+
+                else:
+                    cv2image = cv2.cvtColor(result, cv2.COLOR_BGR2RGB)
+
+                # if draw == True:
+                #     cv2.line(cv2image , (0,int(cy)) , (int(width),int(cy) , (255,0,0) , 3)
+                #     cv2.line(cv2image , (int(cx),0) , (int(cx),int(height)) , (255,0,0) , 3)
+                #     cv2.line(black_background , (0,int(cy)) , (int(width),int(cy)) , (255,0,0) , 3)
+                #     cv2.line(black_background , (int(cx),0) , (int(cx),int(height)) , (255,0,0) , 3)
+
+
+                # if collection == True:
+                #     pos_x.append(((x+w/2)-ox))
+                #     pos_y.append((oy-(y+h/2)))
+                #     cv2.circle(black_background , (int(x+w/2),int(y+h/2)) , 2 , (255,255,255) , -1)
+                
             else:
                 (_, boxes) = trackers.update(frame)
                 for box in boxes:
@@ -458,27 +561,68 @@ def StartTracking():
     def disable_cross():
         tkinter.messagebox.showerror("EXIT" , "Please Exit Using Exit Button")
 
-    button1_tracking = Button(tracker_window , text="Pause\ \n Continue" , bg="orange" , fg="black" ,
-                      command = pausing , state=NORMAL , font=("arial" , 10 , "bold"),relief='solid' , 
-                      width = 15)
-    button1_tracking.place(x = 120 , y = 620)
-    button2_tracking = Button(tracker_window , text="Select" , bg="orange" , fg="black" ,
-                      command = select , state=NORMAL, font=("arial" , 10 , "bold"),relief='solid' , 
-                      width = 15)
-    button2_tracking.place(x = 270 , y = 620)
-    button3_tracking = Button(tracker_window , text="Draw And \n Collect Data" , bg="orange" , fg="black" ,
-                      command = drawing , state=DISABLED , font=("arial" , 10 , "bold"),relief='solid' , 
-                      width = 15)
-    button3_tracking.place(x = 420 , y = 620)
-    # Always use exit for exiting the program
-    button4_tracking = Button(tracker_window , text="Exit" , bg="orange" , fg="black" ,
-                      command = exitt , state=NORMAL , font=("arial" , 10 , "bold"),relief='solid' , 
-                      width = 15)
-    button4_tracking.place(x = 570 , y = 620)
+    if tracker.get() == 'hsv':
+        button1_tracking_hsv = Button(hsv_tracker_window , text="Pause\ \n Continue" , bg="orange" , fg="black" ,
+                command = pausing , state=NORMAL , font=("arial" , 10 , "bold"),relief='solid' , 
+                width = 15)
+        button1_tracking_hsv.place(x = 30 , y = 500)
 
-    # tracker_window.resizable(width=FALSE, height=FALSE)
-    tracker_window.protocol("WM_DELETE_WINDOW", disable_cross)
-    tracker_window.mainloop()
+        button2_tracking_hsv = Button(hsv_tracker_window , text="Exit" , bg="orange" , fg="black" ,
+                command = exitt , state=NORMAL , font=("arial" , 10 , "bold"),relief='solid' , 
+                width = 15)
+        button2_tracking_hsv.place(x = 30 , y = 550)
+
+        button3_tracking_hsv = Button(hsv_tracker_window , text="Draw And \n Collect Data" , bg="orange" , fg="black" ,
+                                command = drawing , state=NORMAL , font=("arial" , 10 , "bold"),relief='solid' , 
+                                width = 15)
+        button3_tracking_hsv.place(x = 30 , y = 600)
+
+        c1_hsv = Checkbutton(hsv_tracker_window , text='Gaussian Blur', variable=var_c1_hsv)
+        c1_hsv.place(x = 560 , y = 500)
+
+        c2_hsv = Checkbutton(hsv_tracker_window , text='Maximum Area', variable=var_c2_hsv)
+        c2_hsv.place(x = 560 , y = 550)
+
+        c3_hsv = Checkbutton(hsv_tracker_window , text='Only Object', variable=var_c3_hsv)
+        c3_hsv.place(x = 560 , y = 600)
+
+        label1_hsvwindow = Label(hsv_tracker_window , text = 'Area' , 
+                                fg='red',bg='yellow',font=("arial" , 10 , "bold"),relief='solid')
+        label1_hsvwindow.place(x = 200 , y = 500)
+        label2_hsvwindow = Label(hsv_tracker_window , text = 'Kernel Value' , 
+                                fg='red',bg='yellow',font=("arial" , 10 , "bold"),relief='solid')
+        label2_hsvwindow.place(x = 200 , y = 550)
+        label3_hsvwindow = Label(hsv_tracker_window , text = 'Morphological Transformation' , 
+                                fg='red',bg='yellow',font=("arial" , 10 , "bold"),relief='solid')
+        label3_hsvwindow.place(x = 200 , y = 600)
+
+        label4_hsvwindow = Label(hsv_tracker_window , text = 'Iterations' , 
+                                fg='red',bg='yellow',font=("arial" , 10 , "bold"),relief='solid')
+        label4_hsvwindow.place(x = 200 , y = 650)
+
+        hsv_tracker_window.protocol("WM_DELETE_WINDOW", disable_cross)
+        hsv_tracker_window.mainloop()
+    else:
+        button1_tracking = Button(tracker_window , text="Pause\ \n Continue" , bg="orange" , fg="black" ,
+                command = pausing , state=NORMAL , font=("arial" , 10 , "bold"),relief='solid' , 
+                width = 15)
+        button1_tracking.place(x = 120 , y = 620)
+        button2_tracking = Button(tracker_window , text="Select" , bg="orange" , fg="black" ,
+                command = select , state=NORMAL, font=("arial" , 10 , "bold"),relief='solid' , 
+                width = 15)
+        button2_tracking.place(x = 270 , y = 620)
+        button3_tracking = Button(tracker_window , text="Draw And \n Collect Data" , bg="orange" , fg="black" ,
+                command = drawing , state=DISABLED , font=("arial" , 10 , "bold"),relief='solid' , 
+                width = 15)
+        button3_tracking.place(x = 420 , y = 620)
+        # Always use exit for exiting the program
+        button4_tracking = Button(tracker_window , text="Exit" , bg="orange" , fg="black" ,
+                command = exitt , state=NORMAL , font=("arial" , 10 , "bold"),relief='solid' , 
+                width = 15)
+        button4_tracking.place(x = 570 , y = 620)
+
+        tracker_window.protocol("WM_DELETE_WINDOW", disable_cross)
+        tracker_window.mainloop()
 
 # TRACKER WINDOW ENDS
 #########################################################################################################
@@ -801,12 +945,12 @@ other_algorithms = Menu(menu)
 menu.add_cascade(label="Other Algorithms", menu=other_algorithms)
 other_algorithms.add_radiobutton(label="HSV Tracking" ,command=otherAlgorithmChooser,
                                 variable=tracker,value="hsv" , state = NORMAL)
-other_algorithms.add_radiobutton(label="Cam Shift", command=otherAlgorithmChooser,
-                                variable=tracker,value="cam")
 other_algorithms.add_radiobutton(label="Dlib Coorelation", command=otherAlgorithmChooser,
                                 variable=tracker,value="dlib")
 other_algorithms.add_radiobutton(label="Optical Flow", command=otherAlgorithmChooser,
                                 variable=tracker,value="optical")
+other_algorithms.add_radiobutton(label="Thresholding", command=otherAlgorithmChooser,
+                                variable=tracker,value="thresh")
 
 help_menu = Menu(menu)
 menu.add_cascade(label="Help", menu=help_menu)
