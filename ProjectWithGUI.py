@@ -63,6 +63,7 @@ var_c2_hsv = StringVar()
 (cx , cy , fcx , fcy) = (0,0,0,0)
 var_c3_hsv = StringVar()
 var_c4_hsv = StringVar()
+spin1_hsv_tracker = StringVar()
 # save window global variables
 
 # value plotter global variables
@@ -92,8 +93,8 @@ var_c1_hsv.set(1)
 var_c2_hsv.set(0)
 var_c3_hsv.set(0)
 var_c4_hsv.set(0)
+spin1_hsv_tracker.set('127')
 ####################################################
-
 def maximum_contour_area(contour):
     maximum_area = cv2.contourArea(contour[0])
     maximum = contour[0]
@@ -146,6 +147,7 @@ def otherAlgorithmChooser():
     print(tracker.get())
 
     if tracker.get() == 'hsv':
+        tkinter.messagebox.showinfo('To Exit' , 'Use "ESC" key to exit once done collecting the hsv values')
         if camera.get() == 0:
             capu = cv2.VideoCapture(int(spinbox1_main.get()))
         elif camera.get() == 1:
@@ -241,20 +243,30 @@ def otherAlgorithmChooser():
 def StartTracking():
 
     global cap
-    if tracker.get() == 'hsv':
+    if tracker.get() == 'hsv' or tracker.get() == 'thresh':
         hsv_tracker_window = Toplevel()
-        hsv_tracker_window.geometry("800x700") # width*height
-        hsv_tracker_window.title("HSV Tracking Window")
+        hsv_tracker_window.geometry("800x800") # width*height
+        if tracker.get() == 'hsv':
+            hsv_tracker_window.title("HSV Tracking Window")
+        else:
+            hsv_tracker_window.title("Thresholding Tracking Window")
 
         entry1_hsv_tracker = Entry(hsv_tracker_window , width = 5)
         entry1_hsv_tracker.place(x = 300 , y = 500)
         entry1_hsv_tracker.insert(END, '100')
 
-        combo = ttk.Combobox(hsv_tracker_window)
-        combo['values']=("None","erosion","dilation","opening","closing")
+        combo1 = ttk.Combobox(hsv_tracker_window)
+        combo1['values']=("None","erosion","dilation","opening","closing")
         # Setting the seleted item
-        combo.current(0)
-        combo.place(x = 400 , y = 600)
+        combo1.current(0)
+        combo1.place(x = 400 , y = 600)
+
+        combo2 = ttk.Combobox(hsv_tracker_window , state = DISABLED)
+        combo2['values']=("THRESH_BINARY","THRESH_BINARY_INV","THRESH_TRUNC","THRESH_TOZERO",
+                            "THRESH_TOZERO_INV" , "ADAPTIVE_MEAN" , "ADAPTIVE_GAUSSIAN","OTSU")
+        # Setting the seleted item
+        combo2.current(0)
+        combo2.place(x = 350 , y = 700)
 
         entry2_hsv_tracker = Entry(hsv_tracker_window , width = 3)
         entry2_hsv_tracker.place(x = 300 , y = 550)
@@ -263,6 +275,12 @@ def StartTracking():
         entry3_hsv_tracker = Entry(hsv_tracker_window , width = 3 , state = DISABLED)
         entry3_hsv_tracker.place(x = 300 , y = 650)
         entry3_hsv_tracker.insert(END, '1')
+
+        spin1_hsv_tracker = Spinbox(hsv_tracker_window,from_=1,to=255,width=4,state=DISABLED)
+        spin1_hsv_tracker.place(x = 600 , y = 700)
+
+
+
 
     else:
         tracker_window = Toplevel()
@@ -287,7 +305,7 @@ def StartTracking():
     color_index = 0
     start_time = 0
 
-    if tracker.get() == 'hsv':
+    if tracker.get() == 'hsv' or tracker.get() == 'thresh':
         lmain = Label(hsv_tracker_window)
         lmain.grid(row = 0 , column = 0)
     else:
@@ -338,15 +356,49 @@ def StartTracking():
                         pos_y.append((oy-(y+h/2)))
                         cv2.circle(black_background , (int(x+w/2),int(y+h/2)) , 2 , (255,255,255) , -1)
 
-            elif tracker.get() == 'hsv':
+            elif tracker.get() == 'hsv' or tracker.get() == 'thresh':
                 if int(var_c1_hsv.get()) == 1:
+                    # change the parameters of gaussian blurring
                     frame = cv2.GaussianBlur(frame, (11, 11), 20)
-                
+
                 frame_copy = frame.copy()
-                hsv = cv2.cvtColor(frame,cv2.COLOR_BGR2HSV)
-                lower_range = np.array([h1w,s1w,v1w])
-                upper_range = np.array([h2w,s2w,v2w])
-                mask = cv2.inRange(hsv,lower_range,upper_range)
+
+                if tracker.get() == 'hsv':
+                    spin1_hsv_tracker.configure(state = DISABLED)
+                    combo2.configure(state = DISABLED)
+
+                    hsv = cv2.cvtColor(frame,cv2.COLOR_BGR2HSV)
+                    lower_range = np.array([h1w,s1w,v1w])
+                    upper_range = np.array([h2w,s2w,v2w])
+                    mask = cv2.inRange(hsv,lower_range,upper_range)
+                else:
+                    spin1_hsv_tracker.configure(state = NORMAL)
+                    combo2.configure(state = NORMAL)
+
+                    try:
+                        spin_value = int(spin1_hsv_tracker.get())
+                    except:
+                        spin_value = 127
+                    grayscale = cv2.cvtColor(frame , cv2.COLOR_BGR2GRAY)
+
+                    if combo2.get() == 'THRESH_BINARY':
+                        _ , mask = cv2.threshold(grayscale , spin_value , 255 , cv2.THRESH_BINARY)
+                    if combo2.get() == 'THRESH_BINARY_INV':
+                        _ , mask = cv2.threshold(grayscale , spin_value , 255 , cv2.THRESH_BINARY_INV)
+                    if combo2.get() == 'THRESH_TRUNC':
+                        _ , mask = cv2.threshold(grayscale , spin_value , 255 , cv2.THRESH_TRUNC)
+                    if combo2.get() == 'THRESH_TOZERO':
+                        _ , mask = cv2.threshold(grayscale , spin_value , 255 , cv2.THRESH_TOZERO)
+                    if combo2.get() == 'THRESH_TOZERO_INV':
+                        _ , mask = cv2.threshold(grayscale , spin_value , 255 , cv2.THRESH_TOZERO_INV)
+
+                    # play with block size and C
+                    if combo2.get() == 'ADAPTIVE_MEAN':
+                        mask = cv2.adaptiveThreshold(grayscale , 255 , cv2.ADAPTIVE_THRESH_MEAN_C , cv2.THRESH_BINARY , 11 , 2)
+                    if combo2.get() == 'ADAPTIVE_GAUSSIAN':
+                        mask = cv2.adaptiveThreshold(grayscale , 255 , cv2.ADAPTIVE_THRESH_GAUSSIAN_C , cv2.THRESH_BINARY , 11 , 2)
+                    if combo2.get() == 'OTSU':
+                        _ , mask = cv2.threshold(grayscale , spin_value , 255 , cv2.THRESH_BINARY+cv2.THRESH_OTSU)
 
                 try:
                     kernel = int(entry2_hsv_tracker.get())
@@ -354,22 +406,22 @@ def StartTracking():
                 except:
                     kernelforerosion = np.ones((5,5) , np.uint8)
 
-                if combo.get() == 'erosion':
+                if combo1.get() == 'erosion':
                     try:
                         mask = cv2.erode(mask , kernelforerosion , iterations = int(entry3_hsv_tracker.get()))
                     except:
                         mask = cv2.erode(mask , kernelforerosion , iterations = 1)
                     entry3_hsv_tracker.configure(state = NORMAL)
-                if combo.get() == 'dilation':
+                if combo1.get() == 'dilation':
                     try:
                         mask = cv2.dilate(mask , kernelforerosion , iterations = int(entry3_hsv_tracker.get()))
                     except:
                         mask = cv2.dilate(mask , kernelforerosion , iterations = 1)
                     entry3_hsv_tracker.configure(state = NORMAL)
-                if combo.get() == 'opening':
+                if combo1.get() == 'opening':
                     mask = cv2.morphologyEx(mask , cv2.MORPH_OPEN , kernelforerosion)  
                     entry3_hsv_tracker.configure(state = DISABLED)
-                if combo.get() == 'closing':
+                if combo1.get() == 'closing':
                     mask = cv2.morphologyEx(mask , cv2.MORPH_CLOSE , kernelforerosion) 
                     entry3_hsv_tracker.configure(state = DISABLED)
 
@@ -607,7 +659,7 @@ def StartTracking():
     def disable_cross():
         tkinter.messagebox.showerror("EXIT" , "Please Exit Using Exit Button")
 
-    if tracker.get() == 'hsv':
+    if tracker.get() == 'hsv' or tracker.get() == 'thresh':
         button1_tracking_hsv = Button(hsv_tracker_window , text="Pause\ \n Continue" , bg="orange" , fg="black" ,
                 command = pausing , state=NORMAL , font=("arial" , 10 , "bold"),relief='solid' , 
                 width = 15)
@@ -646,6 +698,14 @@ def StartTracking():
         label4_hsvwindow = Label(hsv_tracker_window , text = 'Iterations' , 
                                 fg='red',bg='yellow',font=("arial" , 10 , "bold"),relief='solid')
         label4_hsvwindow.place(x = 200 , y = 650)
+
+        label5_hsvwindow = Label(hsv_tracker_window , text = 'Thresholding Options' , 
+                                fg='red',bg='yellow',font=("arial" , 10 , "bold"),relief='solid')
+        label5_hsvwindow.place(x = 200 , y = 700)
+
+        label6_hsvwindow = Label(hsv_tracker_window , text = 'Threshold' , 
+                                fg='red',bg='yellow',font=("arial" , 10 , "bold"),relief='solid')
+        label6_hsvwindow.place(x = 500 , y = 700)
 
         hsv_tracker_window.protocol("WM_DELETE_WINDOW", disable_cross)
         hsv_tracker_window.mainloop()
@@ -694,7 +754,6 @@ def switch():
 
 #########################################################################################################
 # VALUE PLOTTER WINDOW STARTS
-
 def Value_Plotter():
     value_plotter_window = Toplevel()
     value_plotter_window.geometry("400x250") # width*height
@@ -745,8 +804,8 @@ def Value_Plotter():
             plot_title_x = 'X coordinates vs Time'
             plot_title_y = 'Y coordinates vs Time'
         
-        fig = plt.figure(figsize=(12,7))
-        fig.subplots_adjust(hspace=0.5, wspace=0.2)
+        fig1 = plt.figure(figsize=(12,7))
+        fig1.subplots_adjust(hspace=0.5, wspace=0.2)
         
         plt.subplot(3, 2, 1)
         plt.plot(x_axis ,X_values)
@@ -785,6 +844,7 @@ def Value_Plotter():
         plt.title('Histogram of Y coordinates')
 
         plt.show()
+
 
     label1_value_plotter = Label(value_plotter_window , text = 'Select The X and Y values for Plotting' , 
                                 fg='red',bg='yellow',font=("arial" , 16 , "bold"),relief='solid')
@@ -930,6 +990,7 @@ def Allan_Deviation_Plotter():
                     fg='red',bg='yellow',font=("arial" , 8 , "bold"),relief='solid')
     label12_adplotter.place(x = 250 , y = 320)
 
+    ad_plotter_window.mainloop()
 # ALLAN DEVIATION PLOTTER WINDOW ENDS
 #########################################################################################################
 
