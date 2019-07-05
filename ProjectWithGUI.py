@@ -60,8 +60,9 @@ cv2image = 0
 (h1w,s1w,v1w,h2w,s2w,v2w) = (0,0,0,0,0,0)
 var_c1_hsv = StringVar()
 var_c2_hsv = StringVar()
-(cx , cy) = (0,0)
+(cx , cy , fcx , fcy) = (0,0,0,0)
 var_c3_hsv = StringVar()
+var_c4_hsv = StringVar()
 # save window global variables
 
 # value plotter global variables
@@ -90,7 +91,17 @@ value_type.set(0)
 var_c1_hsv.set(1)
 var_c2_hsv.set(0)
 var_c3_hsv.set(0)
+var_c4_hsv.set(0)
 ####################################################
+
+def maximum_contour_area(contour):
+    maximum_area = cv2.contourArea(contour[0])
+    maximum = contour[0]
+    for i in range(1,len(contour)):
+        if(cv2.contourArea(contour[i]) > maximum_area):
+            maximum_area = cv2.contourArea(contour[i])
+            maximum = contour[i]
+    return maximum , maximum_area
 
 # opening a file using a dialog box
 def OpenFile():
@@ -294,7 +305,7 @@ def StartTracking():
         # global cap 
         global initialization_hsv
         global h1w,s1w,v1w,h2w,s2w,v2w
-        global cx,cy
+        global cx,cy , fcx , fcy
 
         ret , frame = cap.read()
         # frame = cv2.resize(frame, (800, 600), interpolation = cv2.INTER_LINEAR)
@@ -331,6 +342,7 @@ def StartTracking():
                 if int(var_c1_hsv.get()) == 1:
                     frame = cv2.GaussianBlur(frame, (11, 11), 20)
                 
+                frame_copy = frame.copy()
                 hsv = cv2.cvtColor(frame,cv2.COLOR_BGR2HSV)
                 lower_range = np.array([h1w,s1w,v1w])
                 upper_range = np.array([h2w,s2w,v2w])
@@ -361,41 +373,63 @@ def StartTracking():
                     mask = cv2.morphologyEx(mask , cv2.MORPH_CLOSE , kernelforerosion) 
                     entry3_hsv_tracker.configure(state = DISABLED)
 
-                result = cv2.bitwise_and(frame,frame,mask = mask)
-                # cv2image = cv2.cvtColor(result, cv2.COLOR_BGR2RGB)
+                result = cv2.bitwise_and(frame_copy,frame_copy,mask = mask)
                 _,contours,_ = cv2.findContours(mask,cv2.RETR_TREE,cv2.CHAIN_APPROX_SIMPLE)
-                for i , contour in enumerate(contours):
-                    area = cv2.contourArea(contour)
-                    if area > int(entry1_hsv_tracker.get()):
-                        frameswithcontours = cv2.drawContours(frame,contours,i,(0,255,0),2)
-                        result = cv2.drawContours(result,contours,i,(0,255,0),2)
-                        cnt = contours[i]
-                        M = cv2.moments(cnt)
-                        cx = int(M['m10']/M['m00'])
-                        cy = int(M['m01']/M['m00'])
-                        cv2.circle(frameswithcontours,(cx,cy),4,(255,0,0),-1)
-                        cv2.circle(result,(cx,cy),4,(255,0,0),-1)
+
+                try:
+                    comparision_area = int(entry1_hsv_tracker.get())
+                except:
+                    comparision_area = 0
+
+                if int(var_c2_hsv.get()) == 0:
+                    for i , contour in enumerate(contours):
+                        area = cv2.contourArea(contour)
+                        if (area > comparision_area):
+                            frameswithcontours = cv2.drawContours(frame_copy,contours,i,(0,255,0),2)
+                            result = cv2.drawContours(result,contours,i,(0,255,0),2)
+                            cnt = contours[i]
+                            M = cv2.moments(cnt)
+                            cx = int(M['m10']/M['m00'])
+                            cy = int(M['m01']/M['m00'])
+                            cv2.circle(frameswithcontours,(cx,cy),4,(255,0,0),-1)
+                            cv2.circle(result,(cx,cy),4,(255,0,0),-1)
+
+                else:
+                    if len(contours) > 0:
+                        # c is the contour with the maximum area
+                        c , max_area = maximum_contour_area(contours)
+                        # draw only if above a certain threshold
+                        if(max_area > comparision_area):
+                            frameswithcontours = cv2.drawContours(frame_copy,c,-1,(0,255,0),4)
+                            result = cv2.drawContours(result,c,-1,(0,255,0),4)
+                            # (x, y), radius = cv2.minEnclosingCircle(c)
+                            M = cv2.moments(c)
+                            cx = int(M['m10']/M['m00'])
+                            cy = int(M['m01']/M['m00'])
+                            # cv2.circle(result, (int(x), int(y)), int(radius), (0, 255, 255), 2)
+                            cv2.circle(frameswithcontours, (cx,cy), 5, (0, 0, 255), -1)
+                            cv2.circle(result, (cx,cy), 5, (0, 0, 255), -1)
+
 
                 if int(var_c3_hsv.get()) == 0:
                     try:        
                         cv2image = cv2.cvtColor(frameswithcontours, cv2.COLOR_BGR2RGB)
                     except:
-                        cv2image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                        cv2image = cv2.cvtColor(frame_copy, cv2.COLOR_BGR2RGB)
 
                 else:
                     cv2image = cv2.cvtColor(result, cv2.COLOR_BGR2RGB)
 
-                # if draw == True:
-                #     cv2.line(cv2image , (0,int(cy)) , (int(width),int(cy) , (255,0,0) , 3)
-                #     cv2.line(cv2image , (int(cx),0) , (int(cx),int(height)) , (255,0,0) , 3)
-                #     cv2.line(black_background , (0,int(cy)) , (int(width),int(cy)) , (255,0,0) , 3)
-                #     cv2.line(black_background , (int(cx),0) , (int(cx),int(height)) , (255,0,0) , 3)
+                if draw == True:
+                    cv2.line(cv2image , (0,int(fcy)) , (int(width),int(fcy)) , (255,0,0) , 3)
+                    cv2.line(cv2image , (int(fcx),0) , (int(fcx),int(height)) , (255,0,0) , 3)
+                    cv2.line(black_background , (0,int(fcy)) , (int(width),int(fcy)) , (255,0,0) , 3)
+                    cv2.line(black_background , (int(fcx),0) , (int(fcx),int(height)) , (255,0,0) , 3)
 
-
-                # if collection == True:
-                #     pos_x.append(((x+w/2)-ox))
-                #     pos_y.append((oy-(y+h/2)))
-                #     cv2.circle(black_background , (int(x+w/2),int(y+h/2)) , 2 , (255,255,255) , -1)
+                if collection == True:
+                    pos_x.append((cx-ox))
+                    pos_y.append((oy-cy))
+                    cv2.circle(black_background , (int(cx),int(cy)) , 2 , (255,255,255) , -1)
                 
             else:
                 (_, boxes) = trackers.update(frame)
@@ -464,13 +498,22 @@ def StartTracking():
         global start_time
         global collection , draw
         global pos_x , pos_y
+        global fcx , fcy , cx , cy
         print("Drawing the reference coordinates")
+
+
+        if tracker.get() == 'hsv':
+            fcx = cx
+            fcy = cy
+            (ox , oy) = (cx , cy)
+        else:
+            fx = x
+            fy = y
+            fw = w
+            fh = h
+            (ox , oy)  = (x+w/2 , y+h/2)
+
         draw = True
-        fx = x
-        fy = y
-        fw = w
-        fh = h
-        (ox , oy)  = (x+w/2 , y+h/2)
         collection = True
         start_time = time.time()
         pos_x = []
@@ -485,7 +528,10 @@ def StartTracking():
         print(pos_x)
         print(pos_y)
         cap.release()
-        tracker_window.destroy()
+        if tracker.get() == 'hsv':
+            hsv_tracker_window.destroy()
+        else:
+            tracker_window.destroy()
         
         save_window = Toplevel()
         save_window.geometry("600x300") # width*height
@@ -570,21 +616,22 @@ def StartTracking():
         button2_tracking_hsv = Button(hsv_tracker_window , text="Exit" , bg="orange" , fg="black" ,
                 command = exitt , state=NORMAL , font=("arial" , 10 , "bold"),relief='solid' , 
                 width = 15)
-        button2_tracking_hsv.place(x = 30 , y = 550)
+        button2_tracking_hsv.place(x = 30 , y = 600)
 
         button3_tracking_hsv = Button(hsv_tracker_window , text="Draw And \n Collect Data" , bg="orange" , fg="black" ,
                                 command = drawing , state=NORMAL , font=("arial" , 10 , "bold"),relief='solid' , 
                                 width = 15)
-        button3_tracking_hsv.place(x = 30 , y = 600)
+        button3_tracking_hsv.place(x = 30 , y = 550)
 
         c1_hsv = Checkbutton(hsv_tracker_window , text='Gaussian Blur', variable=var_c1_hsv)
         c1_hsv.place(x = 560 , y = 500)
 
-        c2_hsv = Checkbutton(hsv_tracker_window , text='Maximum Area', variable=var_c2_hsv)
+        c2_hsv = Checkbutton(hsv_tracker_window , text='Maximum Area Mode', variable=var_c2_hsv)
         c2_hsv.place(x = 560 , y = 550)
 
         c3_hsv = Checkbutton(hsv_tracker_window , text='Only Object', variable=var_c3_hsv)
         c3_hsv.place(x = 560 , y = 600)
+
 
         label1_hsvwindow = Label(hsv_tracker_window , text = 'Area' , 
                                 fg='red',bg='yellow',font=("arial" , 10 , "bold"),relief='solid')
