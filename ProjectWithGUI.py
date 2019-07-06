@@ -18,11 +18,11 @@ import tkinter.ttk as ttk
 
 #########################################################################################################
 # MAIN WINDOW STARTS
-main_window = Tk()
-main_window.geometry("500x150")
-main_window.title("Tracking Program")
+main_window = Tk() # creating a new main window
+main_window.geometry("500x150") # Width and height of the window
+main_window.title("Tracking Program") #Title of the window
 
-
+# Function for centering the main window
 def center_window(width=300, height=200):
     # get screen width and height
     screen_width = main_window.winfo_screenwidth()
@@ -33,9 +33,9 @@ def center_window(width=300, height=200):
     y = (screen_height/2) - (height/2)
     main_window.geometry('%dx%d+%d+%d' % (width, height, x, y))
 
-
 center_window(500, 150)
 
+# global variables section 
 ####################################################
 # main window global variables
 tracker = StringVar()
@@ -66,7 +66,6 @@ var_c2_hsv = StringVar()
 var_c3_hsv = StringVar()
 var_c4_hsv = StringVar()
 spin1_hsv_tracker = StringVar()
-# save window global variables
 
 # value plotter global variables
 load_path_x_plotter = ''
@@ -84,6 +83,7 @@ adplotter_path = ''
 adplotter_values = ''
 ####################################################
 
+# Setting predefined values to some of the widgets in GUI
 ####################################################
 # setting values
 camera.set(0)
@@ -98,7 +98,18 @@ var_c4_hsv.set(0)
 spin1_hsv_tracker.set('127')
 ####################################################
 
+# Function for gamma transform
+# Generally used with webcam when lighting conditions are bad or insufficient 
+# To increase the brightness of the image
+def gamma_transform(image , gamma = 2):
+    invGamma = 1.0 / gamma
+    table = np.array([((i / 255.0) ** invGamma) * 255
+    for i in np.arange(0, 256)]).astype("uint8")
+    return cv2.LUT(image, table)
 
+# Function for finding the maximum contour area
+# Returns the contour with maximum area and the maximum area 
+# Used in HSV and thresholding tracking
 def maximum_contour_area(contour):
     maximum_area = cv2.contourArea(contour[0])
     maximum = contour[0]
@@ -108,9 +119,9 @@ def maximum_contour_area(contour):
             maximum = contour[i]
     return maximum, maximum_area
 
-# opening a file using a dialog box
 
-
+# Function for opening a file using a dialog box
+# Used in file submenu of the main window
 def OpenFile():
     global load_path, enable_tracking
     load_path = askopenfilename(initialdir="/", title="Select file")
@@ -122,13 +133,15 @@ def OpenFile():
     else:
         other_algorithms.entryconfig(1, state=DISABLED)
 
-
+# Function for choosing the directory for saving using dialog box
+# Used in file submenu of the main window
 def SaveFile():
     global save_path
     save_path = filedialog.askdirectory()
     print(save_path)
 
-
+# Function for opening a new window for about option in help submenu
+# Contains information about the program
 def About():
     about_window = Toplevel()
     about_window.geometry("500x500")
@@ -151,7 +164,8 @@ def About():
 
     about_window.mainloop()
 
-
+# Function for opening a new window for use option in help submenu
+# Contains use instructions about the program
 def Use():
 
     instructions_window = Toplevel()
@@ -175,7 +189,8 @@ def Use():
 
     instructions_window.mainloop()
 
-
+# Function for opening a new window for info option in help submenu
+# Contains information about various trackers in the program
 def Info():
     info_window = Toplevel()
     info_window.geometry("500x500")
@@ -198,7 +213,8 @@ def Info():
 
     info_window.mainloop()
 
-
+# Function for choosing the tracker
+# Chooses one of the trackers present in the tracker submenu
 def TrackerChooser():
     global tracker, Tracker_used
     OPENCV_OBJECT_TRACKERS = {
@@ -213,7 +229,8 @@ def TrackerChooser():
     Tracker_used = OPENCV_OBJECT_TRACKERS[tracker.get()]()
     print(Tracker_used)
 
-
+# Function for choosing other tracking algorithms 
+# Chooses one of the algorithms present in the other algorithms submenu
 def otherAlgorithmChooser():
     global h1w, s1w, v1w, h2w, s2w, v2w
     print(tracker.get())
@@ -315,17 +332,25 @@ def otherAlgorithmChooser():
 
 #########################################################################################################
 # TRACKER WINDOW STARTS
+
+# Function for tracking purpose
+# This is the function called when Start tracking button in the main window is pressed
 def StartTracking():
 
     global cap
+
+    # making a new window based on the type of tracker selected in the main window
+    # one type of window for hsv and thresholding tracker and other type of window for other trackers
     if tracker.get() == 'hsv' or tracker.get() == 'thresh':
-        hsv_tracker_window = Toplevel()
+        hsv_tracker_window = Toplevel() # creating hsv tracking window
         hsv_tracker_window.geometry("800x800")  # width*height
+        # simple logic for the title of the window
         if tracker.get() == 'hsv':
             hsv_tracker_window.title("HSV Tracking Window")
         else:
             hsv_tracker_window.title("Thresholding Tracking Window")
 
+        # Several widgets present in the HSV Tracking Window/Thresholding Tracking Window
         entry1_hsv_tracker = Entry(hsv_tracker_window, width=5)
         entry1_hsv_tracker.place(x=300, y=500)
         entry1_hsv_tracker.insert(END, '100')
@@ -355,23 +380,31 @@ def StartTracking():
         spin1_hsv_tracker = Spinbox(
             hsv_tracker_window, from_=1, to=255, width=4, state=DISABLED)
         spin1_hsv_tracker.place(x=600, y=700)
-
     else:
         tracker_window = Toplevel()
         tracker_window.geometry("800x700")  # width*height
         tracker_window.title("Tracking Window")
 
+    # intializing trackers for using different types of tracker from the tracker sub menu
     trackers = cv2.MultiTracker_create()
+
+    # selecting the input device based in the radio button
+    # webcam or video
     if camera.get() == 0:
         cap = cv2.VideoCapture(int(spinbox1_main.get()))
+        # cap = cv2.VideoCapture(int(spinbox1_main.get()) + cv2.CAP_DSHOW)
     elif camera.get() == 1:
         cap = cv2.VideoCapture(load_path)
 
+    # Setting the height and width of the video
     cap.set(cv2.CAP_PROP_FRAME_WIDTH, 800)
     cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 600)
 
+    # Storing height and width of the video
     width, height = cap.get(3), cap.get(4)
+    # Creating a blackbackground for plotting purposes
     black_background = np.zeros((int(height), int(width), 3), np.uint8)
+
     (x, y, w, h) = (0, 0, 0, 0)
     (fx, fy, fw, fh) = (0, 0, 0, 0)
     (ox, oy) = (0, 0)
@@ -379,6 +412,7 @@ def StartTracking():
     color_index = 0
     start_time = 0
 
+    # Choosing the window for displaying depending upon tracker
     if tracker.get() == 'hsv' or tracker.get() == 'thresh':
         lmain = Label(hsv_tracker_window)
         lmain.grid(row=0, column=0)
@@ -386,7 +420,10 @@ def StartTracking():
         lmain = Label(tracker_window)
         lmain.grid(row=0, column=0)
 
+    # Function for showing the frames of input continously
+    # Like an infinite while loop collecting frames one by one and performing the required operation on each frame
     def show_frame():
+        # making the variables global in the program so that they can be manipulated from any function
         global frame
         global fx, fy, fw, fh, x, y, w, h, ox, oy
         global collection, draw
@@ -394,17 +431,37 @@ def StartTracking():
         global dlib_tracking, dlib_tracker
         global cv2image
         global startX, startY, endX, endY
-        # global cap
         global initialization_hsv
         global h1w, s1w, v1w, h2w, s2w, v2w
         global cx, cy, fcx, fcy
 
+        # getting the frames from input device 
         ret, frame = cap.read()
+
+        # Histogram equaliztion
+        # Used when there is uneven distribution of light
+        # frame = cv2.cvtColor(frame, cv2.COLOR_BGR2YUV)
+        # # equalize the histogram of the Y channel
+        # frame[:,:,0] = cv2.equalizeHist(frame[:,:,0])
+        # # convert the YUV image back to RGB format
+        # frame = cv2.cvtColor(frame, cv2.COLOR_YUV2BGR)
+
+        # gamma transformation
+        # Can be used when the brightness is very less
+        # frame = gamma_transform(frame,2)
+
+        # Resizing the frame window
         # frame = cv2.resize(frame, (800, 600), interpolation = cv2.INTER_LINEAR)
+
+
         if ret == True:
             color_index = 0
+
+            # flip the frame if the input device is webcam
             if camera.get() == 0:
                 frame = cv2.flip(frame, 1)
+
+            # Execute the certain set of logic if the tracker selected is dlib from other algorithms
             if tracker.get() == 'dlib':
                 cv2image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
                 if dlib_tracking:
@@ -421,6 +478,7 @@ def StartTracking():
                     cv2.circle(cv2image, (int(x+w/2), int(y+h/2)),
                                4, (255, 255, 0), -1)
 
+                    # draws the x and the y axis on the frame
                     if draw == True:
                         cv2.line(cv2image, (0, int(fy+fh/2)),
                                  (int(width), int(fy+fh/2)), (255, 0, 0), 3)
@@ -430,20 +488,24 @@ def StartTracking():
                                  (int(width), int(fy+fh/2)), (255, 0, 0), 3)
                         cv2.line(black_background, (int(fx+fw/2), 0),
                                  (int(fx+fw/2), int(height)), (255, 0, 0), 3)
-
+                    
+                    # Collects the postion of center(x,y) of the particles 
                     if collection == True:
                         pos_x.append(((x+w/2)-ox))
                         pos_y.append((oy-(y+h/2)))
                         cv2.circle(black_background, (int(x+w/2),
                                                       int(y+h/2)), 2, (255, 255, 255), -1)
 
+            # Execute the certain set of logic if the tracker selected is hsv or thresholding from other algorithms
             elif tracker.get() == 'hsv' or tracker.get() == 'thresh':
                 if int(var_c1_hsv.get()) == 1:
                     # change the parameters of gaussian blurring
+                    # 11 is the kernel size 11 and 20 can be changed
                     frame = cv2.GaussianBlur(frame, (11, 11), 20)
 
                 frame_copy = frame.copy()
 
+                # Logic if the tracker is hsv
                 if tracker.get() == 'hsv':
                     spin1_hsv_tracker.configure(state=DISABLED)
                     combo2.configure(state=DISABLED)
@@ -452,6 +514,8 @@ def StartTracking():
                     lower_range = np.array([h1w, s1w, v1w])
                     upper_range = np.array([h2w, s2w, v2w])
                     mask = cv2.inRange(hsv, lower_range, upper_range)
+                
+                # logic if the tracker is thresholding
                 else:
                     spin1_hsv_tracker.configure(state=NORMAL)
                     combo2.configure(state=NORMAL)
@@ -494,7 +558,8 @@ def StartTracking():
                     kernelforerosion = np.ones((kernel, kernel), np.uint8)
                 except:
                     kernelforerosion = np.ones((5, 5), np.uint8)
-
+                
+                # morphological transformations common for both hsv and thresholding tracker
                 if combo1.get() == 'erosion':
                     try:
                         mask = cv2.erode(mask, kernelforerosion, iterations=int(
@@ -527,6 +592,7 @@ def StartTracking():
                 except:
                     comparision_area = 0
 
+                # Selecting contours above a certain area
                 if int(var_c2_hsv.get()) == 0:
                     for i, contour in enumerate(contours):
                         area = cv2.contourArea(contour)
@@ -543,6 +609,7 @@ def StartTracking():
                                        (cx, cy), 4, (255, 0, 0), -1)
                             cv2.circle(result, (cx, cy), 4, (255, 0, 0), -1)
 
+                # Selecting cotour with the maximum area
                 else:
                     if len(contours) > 0:
                         # c is the contour with the maximum area
@@ -588,6 +655,7 @@ def StartTracking():
                     cv2.circle(black_background, (int(cx), int(cy)),
                                2, (255, 255, 255), -1)
 
+            # Execute the certain set of logic if the tracker selected is from the trackers submenu
             else:
                 (_, boxes) = trackers.update(frame)
                 for box in boxes:
@@ -627,11 +695,14 @@ def StartTracking():
 
     show_frame()
 
-    # functions for buttons
+    # Function for pausing the video
+    # This function is called when pause button is pressed in tracker window
     def pausing():
         global pause
         pause = pause+1
 
+    # Function for selecting the object for tracking by drawing the bounding box
+    # This function is called when select button is pressed in the tracker window
     def select():
         global frame
         global dlib_tracking, dlib_tracker
@@ -659,6 +730,9 @@ def StartTracking():
             cv2.destroyWindow('Selector')
             button3_tracking.configure(state=NORMAL)
 
+    # Function enables drawing of axis and storing of coordinates
+    # Marks the official beginning of tracking
+    # This function is called when select Draw and collect button is pressed in the tracker window
     def drawing():
         global fx, fy, fw, fh, x, y, w, h, ox, oy
         global start_time
@@ -686,6 +760,8 @@ def StartTracking():
 
 #########################################################################################################
 # SAVE WINDOW STARTS
+    # This function is called once exit button in the tracker window is pressed
+    # This opens up a new window and asks for save location and name of files
     def exitt():
         global end_time, total_time
         end_time = time.time()
@@ -693,24 +769,33 @@ def StartTracking():
         print(pos_x)
         print(pos_y)
         cap.release()
+
+        # destroy the particular tracker window depending upon the tracker
         if tracker.get() == 'hsv':
             hsv_tracker_window.destroy()
         else:
             tracker_window.destroy()
 
+        # creating the save window
         save_window = Toplevel()
         save_window.geometry("600x300")  # width*height
         save_window.title("Tracking Window")
         save_window.resizable(width=FALSE, height=FALSE)
 
+        # This function is called when select button is pressed in the save window
+        # This function is used for selecting the save directory
         def directory_select():
             global save_path
             save_path = filedialog.askdirectory()
+
+            # Logic for enabling and disabling save button in save window
             if save_path == '':
                 button2_saving.configure(state=DISABLED)
             else:
                 button2_saving.configure(state=NORMAL)
 
+        # This function is called when save button is clicked
+        # This function is used to save the files in the required destination
         def saving_the_files():
             path_x = save_path + '//' + entry1_save_window.get()
             path_y = save_path + '//' + entry2_save_window.get()
@@ -723,6 +808,7 @@ def StartTracking():
             cv2.imwrite(path_background, black_background)
             tkinter.messagebox.showinfo("Saving", "Done Saving")
 
+        # Save window widgets
         label1_save_window = Label(save_window, text='If You Want to save the data then select the directory \n  Enter The Name of the files along with Extensions',
                                    fg='red', bg='yellow', font=("arial", 16, "bold"), relief='solid')
         label1_save_window.pack()
@@ -766,10 +852,11 @@ def StartTracking():
 # SAVE WINDOW ENDS
 #########################################################################################################
 
-    # disabling cross
+    # Disabling cross in the tracker window so that user uses exit button which leads to save window
     def disable_cross():
         tkinter.messagebox.showerror("EXIT", "Please Exit Using Exit Button")
-
+    
+    # tracker window widgets depending for hsv or thresholding tracking
     if tracker.get() == 'hsv' or tracker.get() == 'thresh':
         button1_tracking_hsv = Button(hsv_tracker_window, text="Pause\ \n Continue", bg="orange", fg="black",
                                       command=pausing, state=NORMAL, font=("arial", 10, "bold"), relief='solid',
@@ -822,6 +909,7 @@ def StartTracking():
 
         hsv_tracker_window.protocol("WM_DELETE_WINDOW", disable_cross)
         hsv_tracker_window.mainloop()
+    # tracker window widgets for all the tracker in the trackers submenu
     else:
         button1_tracking = Button(tracker_window, text="Pause\ \n Continue", bg="orange", fg="black",
                                   command=pausing, state=NORMAL, font=("arial", 10, "bold"), relief='solid',
@@ -847,9 +935,8 @@ def StartTracking():
 # TRACKER WINDOW ENDS
 #########################################################################################################
 
-# Logic for enabling and disabling boxes
-
-
+# This function is used for enabling and disabling widgets
+# Some widgets or buttons remain disabled unless certain buttons are pressed
 def switch():
     if camera.get() == 1:
         spinbox1_main.configure(state=DISABLED)
@@ -866,15 +953,23 @@ def switch():
         button1_main.configure(state=NORMAL)
         other_algorithms.entryconfig(1, state=NORMAL)
 
-
 #########################################################################################################
 # VALUE PLOTTER WINDOW STARTS
+
+# This function is used for plotting the values of postions of the tracked particles
+# This function opens a new window
+# This function is called when value plotter button is clicked in the main window
 def Value_Plotter():
+
+    # creation of new window
     value_plotter_window = Toplevel()
     value_plotter_window.geometry("400x250")  # width*height
     value_plotter_window.title("Plotting Window")
     value_plotter_window.resizable(width=FALSE, height=FALSE)
 
+    # This function is called when select x values button is clicked
+    # It is used select the x values saved in the computer
+    # It opens a dialog box to choose the file
     def value_plotter_x_values():
         global load_path_x_plotter, enable_plot, loaded_X
         load_path_x_plotter = askopenfilename(
@@ -885,6 +980,9 @@ def Value_Plotter():
             button4_value_plotter.configure(state=NORMAL)
         loaded_X = np.load(load_path_x_plotter)
 
+    # This function is called when select y values button is clicked
+    # It is used select the y values saved in the computer
+    # It opens a dialog box to choose the file    
     def value_plotter_y_values():
         global load_path_y_plotter, enable_plot, loaded_Y
         load_path_y_plotter = askopenfilename(
@@ -895,6 +993,9 @@ def Value_Plotter():
             button4_value_plotter.configure(state=NORMAL)
         loaded_Y = np.load(load_path_y_plotter)
 
+    # This function is called when select time values button is clicked
+    # It is used select the time values saved in the computer
+    # It opens a dialog box to choose the file    
     def value_plotter_time_values():
         global load_path_time_plotter, loaded_time
         load_path_time_plotter = askopenfilename(
@@ -903,6 +1004,8 @@ def Value_Plotter():
             checkbutton1_value_plotter.configure(state=NORMAL)
         loaded_time = np.load(load_path_time_plotter)
 
+    # This function is used to display the matplotlib graph
+    # This function is called when plot button is clicked
     def value_plot():
         X_values = loaded_X
         Y_values = loaded_Y
@@ -963,6 +1066,7 @@ def Value_Plotter():
 
         plt.show()
 
+    # plotter window widgets
     label1_value_plotter = Label(value_plotter_window, text='Select The X and Y values for Plotting',
                                  fg='red', bg='yellow', font=("arial", 16, "bold"), relief='solid')
     label1_value_plotter.pack()
@@ -994,6 +1098,8 @@ def Value_Plotter():
 #########################################################################################################
 # ALLAN DEVIATION PLOTTER WINDOW STARTS
 
+# This function is used for plotting the allan deviation 
+# This function is called when ADEV plotter button is clicked on the main window
 def Allan_Deviation_Plotter():
     ad_plotter_window = Toplevel()
     ad_plotter_window.geometry("400x350")  # width*height
@@ -1002,6 +1108,8 @@ def Allan_Deviation_Plotter():
 
     tau1 = np.logspace(0, 4, 1000)
 
+    # This function is used for selecting the values whose allan deviation is to be plotted
+    # This function is called when select values button is clicked in ad pltter window
     def value_adplotter():
         global adplotter_path, adplotter_values
         adplotter_path = askopenfilename(initialdir="/", title="Select Values")
@@ -1010,6 +1118,8 @@ def Allan_Deviation_Plotter():
             adplotter_values = np.load(adplotter_path)
             plt.grid(color='red')
 
+    # This function is used for plotting the allan deviation and displaying the matplotlib graph
+    # This function is called when plot allan deviation button is clicked in the ad plotter window
     def plot_adplotter():
         try:
             rate = int(entry1_adplotter.get())
@@ -1032,6 +1142,7 @@ def Allan_Deviation_Plotter():
             noise = ad[t21_ind1[0]]
             # noise density is value of ADEV curve at 1s averaging time.
 
+            # Ad plotter window widgets for displaying some values
             label8_adplotter.configure(text=str(allandeviation_minimum_value))
             label9_adplotter.configure(text=str(allandeviation_maximum_value))
             label10_adplotter.configure(text=str(tau_min))
@@ -1048,6 +1159,7 @@ def Allan_Deviation_Plotter():
             tkinter.messagebox.showerror(
                 'Rate Error', 'Choose a larger or a smaller rate')
 
+    # Allan deviation plotter window widgets
     label1_adplotter = Label(ad_plotter_window, text='Select X or Y for Allan Deviation',
                              fg='red', bg='yellow', font=("arial", 16, "bold"), relief='solid')
     label1_adplotter.pack()
@@ -1112,7 +1224,7 @@ def Allan_Deviation_Plotter():
 # ALLAN DEVIATION PLOTTER WINDOW ENDS
 #########################################################################################################
 
-
+# main window widgets
 label1_main = Label(main_window, text='Please Read The Use Instructions in Help Menu',
                     fg='red', bg='yellow', font=("arial", 16, "bold"), relief='solid')
 label1_main.pack()
@@ -1138,18 +1250,20 @@ button3_main = Button(main_window, text="ADEV Plotter", bg="orange", fg="black",
                       font=("arial", 10, "bold"))
 button3_main.place(x=280, y=110)
 
+# Creating the menu in the main window
 menu = Menu(main_window)
 main_window.config(menu=menu)
 
 file_menu = Menu(menu)
 # Adding the menu option
 menu.add_cascade(label='File', menu=file_menu)
-# adding the submenus
+# adding the file submenu
 file_menu.add_command(label="Open", command=OpenFile)
 file_menu.add_command(label="Save", command=SaveFile)
 file_menu.add_separator()
 file_menu.add_command(label="Exit", command=main_window.quit)
 
+# adding the tracker submenu
 trackers_menu = Menu(menu)
 menu.add_cascade(label="Trackers", menu=trackers_menu)
 trackers_menu.add_radiobutton(label="CSRT", command=TrackerChooser,
@@ -1167,17 +1281,19 @@ trackers_menu.add_radiobutton(label="MEDIANFLOW", command=TrackerChooser,
 trackers_menu.add_radiobutton(label="MOSSE", command=TrackerChooser,
                               variable=tracker, value="mosse")
 
+# adding the other algorithms submenu
 other_algorithms = Menu(menu)
 menu.add_cascade(label="Other Algorithms", menu=other_algorithms)
 other_algorithms.add_radiobutton(label="HSV Tracking", command=otherAlgorithmChooser,
                                  variable=tracker, value="hsv", state=NORMAL)
 other_algorithms.add_radiobutton(label="Dlib Coorelation", command=otherAlgorithmChooser,
                                  variable=tracker, value="dlib")
-other_algorithms.add_radiobutton(label="Optical Flow", command=otherAlgorithmChooser,
-                                 variable=tracker, value="optical")
+# other_algorithms.add_radiobutton(label="Optical Flow", command=otherAlgorithmChooser,
+#                                  variable=tracker, value="optical")
 other_algorithms.add_radiobutton(label="Thresholding", command=otherAlgorithmChooser,
                                  variable=tracker, value="thresh")
 
+# adding the help submenu
 help_menu = Menu(menu)
 menu.add_cascade(label="Help", menu=help_menu)
 help_menu.add_command(label="Use Instrcutions", command=Use)
