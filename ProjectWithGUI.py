@@ -145,17 +145,17 @@ def SaveFile():
 # Contains information about the program
 def About():
     about_window = Toplevel()
-    about_window.geometry("250x300")
+    about_window.geometry("280x320")
     about_window.title("About the Software")
     about_window.resizable(FALSE , FALSE)
 
     scrollbar = Scrollbar(about_window)
-    editArea_about = Text(about_window, width=28, height=32, wrap="word",
+    editArea_about = Text(about_window, width=35, height=32, wrap="word",
                           yscrollcommand=scrollbar.set,
                           borderwidth=0, highlightthickness=0)
 
     text = ''' Created by : Sarthak Narayan \n Version : 2019.07 \n License : MIT License 
-    \n Dependencies Python : 3.6.8 \n OpenCV : 3.4.2 \n Tkinter : 8.6 \n PIL : 5.4.1 
+    \n Dependencies \n Python : 3.6.8 \n OpenCV : 3.4.2 \n Tkinter : 8.6 \n PIL : 5.4.1 
  numpy : 1.16.2 \n Matplotlib : 2.2.2 \n Allan Tools : 2018.03 \n Dlib : 19.7.0 
      \n \nIF THE PROGRAM DOESNT WORK AS INTENDED THEN TRY CHECKING AND MATCHING THE VERSIONS \
 WITH THE ONES MENTIONED ABOVE'''
@@ -201,7 +201,7 @@ def Use():
       NOTE: For quickly getting the hsv values set h2w , s2w , v2w to maximum the start increasing h1w , s1w , v1w
             and decreasing h2w , s2w , v2w to get the desired color values.
           
-2)Tracking the Particles :
+2)TRACKING THE PARTICLES :
     i)Pause button in the tracking window can be used for pausing the window.
    ii)Use the select the button to select the region or object to be tracked. 
       When the select window is pressed the video will be paused and a new window will appear.
@@ -220,26 +220,26 @@ def Use():
       NOTE: The axes drawn take the center of the particle as their origin and the all the coordinates stored for 
             processing are calculated with respect to the origin.     
              
-3)Saving the data :
+3)SAVING THE DATA :
     i)Select the directory where the data is to be saved by clicking on the Directory button. It will open a dialog box
       for selecting the directory.
    ii)Write the name of the files to be saved. DONT CHANGE THE EXTENSIONS.
   iii)Click on the save button to save the files. A pop up will appear saying that files have been saved successfully.
      
-4)Plotting the data :
+4)PLOTTING THE DATA :
     i)To plot the data click on value plotter button.
    ii)Select the X and Y values by clicking on respective buttons and choosing the files from the dialog box.
   iii)Time values can also be selected by the same process to use time values tick the checkbox.
    iv)Click on plot button to get the matplotlib plot.
    
-5)Plotting allan deviation :
+5)PLOTTING ALLAN DEVIATION :
     i)To plot allan deviation click on ADEV plotter button in the main window.
    ii)Select the value for which you want to plot the allan deviation by using the select values button.
       It will open a dialog box to choose the file.
   iii)If you plotting for X values choose the Use X radio button or vice verse.
    iv)Select the rate and click on plot allan deviation button.
    
-      Note: If you want to see allan deviation plots for multiple plots just change the rate and click on plot allan
+      NOTE: If you want to see allan deviation plots for multiple plots just change the rate and click on plot allan
             allan deviation button again.   '''
     
     editArea_use.configure(state='normal')
@@ -256,15 +256,116 @@ def Use():
 # Contains information about various trackers in the program
 def Info():
     info_window = Toplevel()
-    info_window.geometry("500x500")
+    info_window.geometry("1300x600")
     info_window.title("Info About Trackers")
 
     scrollbar = Scrollbar(info_window)
-    editArea_info = Text(info_window, width=50, height=50, wrap="word",
+    editArea_info = Text(info_window, width=150, height=80, wrap="word",
                          yscrollcommand=scrollbar.set,
                          borderwidth=0, highlightthickness=0)
 
-    text = '1 \n 1 \n 1 \n 1 \n 1 \n 1 \n 1 \n 1 \n 1 \n 1 \n 1 \n 1 \n 1 \n 1 \n 1 \n'
+    text = ''' \t \t \t \t \t \t \t INFO ABOUT TRACKERS \n
+Object Tracking Algorithms :
+Present in the trackers submenu
+1) BOOSTING Tracker :-
+    This tracker is based on an online version of AdaBoost — the algorithm that the HAAR cascade based face detector uses internally. This classifier needs 
+    to be trained at runtime with positive and negative examples of the object. The initial bounding box supplied by the user 
+    ( or by another object detection algorithm ) is taken as the positive example for the object, and many image patches outside the bounding box are 
+    treated as the background. Given a new frame, the classifier is run on every pixel in the neighborhood of the previous location and the score of 
+    the classifier is recorded. The new location of the object is the one where the score is maximum. So now we have one more positive example 
+    for the classifier. As more frames come in, the classifier is updated with this additional data.
+
+    Pros : None. This algorithm is a decade old and works ok, but I could not find a good reason to use it especially when other advanced trackers (MIL, KCF) 
+        based on similar principles are available.
+    Cons : Tracking performance is mediocre. It does not reliably know when tracking has failed.
+
+2) MIL Tracker :-
+    This tracker is similar in idea to the BOOSTING tracker described above. The big difference is that instead of considering only the current location 
+    of the object as a positive example, it looks in a small neighborhood around the current location to generate several potential positive examples. 
+    You may be thinking that it is a bad idea because in most of these “positive” examples the object is not centered.This is where Multiple Instance 
+    Learning ( MIL ) comes to rescue. In MIL, you do not specify positive and negative examples, but positive and negative “bags”. The collection of 
+    images in the positive bag are not all positive examples. Instead, only one image in the positive bag needs to be a positive example! 
+    In our example, a positive bag contains the patch centered on the current location of the object and also patches in a small neighborhood around it. 
+    Even if the current location of the tracked object is not accurate, when samples from the neighborhood of the current location are put in the 
+    positive bag, there is a good chance that this bag contains at least one image in which the object is nicely centered. MIL project page 
+    has more information for people who like to dig deeper into the inner workings of the MIL tracker.
+
+    Pros : The performance is pretty good. It does not drift as much as the BOOSTING tracker and it does a reasonable job under partial occlusion. 
+        If you are using OpenCV 3.0, this might be the best tracker available to you. But if you are using a higher version, consider KCF.
+    Cons : Tracking failure is not reported reliably. Does not recover from full occlusion.
+
+3) KCF Tracker :-
+    KFC stands for Kernelized Correlation Filters. This tracker builds on the ideas presented in the previous two trackers. This tracker utilizes that 
+    fact that the multiple positive samples used in the MIL tracker have large overlapping regions. This overlapping data leads to some nice mathematical 
+    properties that is exploited by this tracker to make tracking faster and more accurate at the same time.
+
+    Pros: Accuracy and speed are both better than MIL and it reports tracking failure better than BOOSTING and MIL. I recommend using this 
+        for most applications.
+    Cons : Does not recover from full occlusion. Not implemented in OpenCV 3.0.
+
+4) TLD Tracker :-
+    TLD stands for Tracking, learning and detection. As the name suggests, this tracker decomposes the long term tracking task into three components — 
+    (short term) tracking, learning, and detection. From the author’s paper, “The tracker follows the object from frame to frame. The detector localizes 
+    all appearances that have been observed so far and corrects the tracker if necessary. The learning estimates detector’s errors and updates it to 
+    avoid these errors in the future.” This output of this tracker tends to jump around a bit. For example, if you are tracking a pedestrian and there 
+    are other pedestrians in the scene, this tracker can sometimes temporarily track a different pedestrian than the one you intended to track. 
+    On the positive side, this track appears to track an object over a larger scale, motion, and occlusion. If you have a video sequence where the object 
+    is hidden behind another object, this tracker may be a good choice.
+
+    Pros : Works the best under occlusion over multiple frames. Also, tracks best over scale changes.
+    Cons : Lots of false positives making it almost unusable.
+
+5) MEDIANFLOW Tracker :-
+    Internally, this tracker tracks the object in both forward and backward directions in time and measures the discrepancies between these two trajectories.
+    Minimizing this ForwardBackward error enables them to reliably detect tracking failures and select reliable trajectories in video sequences.
+    In my tests, I found this tracker works best when the motion is predictable and small. Unlike, other trackers that keep going even when the tracking has 
+    clearly failed, this tracker knows when the tracking has failed.
+
+    Pros : Excellent tracking failure reporting. Works very well when the motion is predictable and there is no occlusion.
+    Cons : Fails under large motion.
+
+6) MOSSE tracker :-
+    Minimum Output Sum of Squared Error (MOSSE) uses adaptive correlation for object tracking which produces stable correlation filters when initialized using
+    a single frame. MOSSE tracker is robust to variations in lighting, scale, pose, and non-rigid deformations. It also detects occlusion based upon the 
+    peak-to-sidelobe ratio, which enables the tracker to pause and resume where it left off when the object reappears. MOSSE tracker also operates at a 
+    higher fps (450 fps and even more). To add to the positives, it is also very easy to implement, is as accurate as other complex trackers and much faster. 
+    But, on a performance scale, it lags behind the deep learning based trackers.
+
+    Pros : Excellent speed.
+    Cons : Lacks accuracy.
+
+7)CSRT tracker :-
+    In the Discriminative Correlation Filter with Channel and Spatial Reliability (DCF-CSR), we use the spatial reliability map for adjusting the filter 
+    support to the part of the selected region from the frame for tracking. This ensures enlarging and localization of the selected region and improved 
+    tracking of the non-rectangular regions or objects. It uses only 2 standard features (HoGs and Colornames). It also operates at a comparatively lower 
+    fps (25 fps) but gives higher accuracy for object tracking.
+
+    Pros : Excellent accuracy
+    Cons : Gives low fps.
+
+Present in the other algorithms submenu
+8)HSV Tracking :-
+    This type of tracking works based on the segmenting the object from its environment on the basis of its color and then tracking the segmented object.
+    HSV values have to set again and again for different colored objects.
+
+    Pros : Fast and works very well under stable lighting conditions and for bright colors
+    Cons : Fails when lighting condition changes.
+
+9)Dlib correlation tracking :-
+    This type of tracking is based on the dlib package in opencv and builds on the popular MOSSE tracker. While the MOSSE tracker works well for objects
+    that are translated, it often fails for objects that change in scale. A scale pyramid is used in dlib to accurately estimate the scale of an 
+    object after the optimal translation was found. This  allows us to track objects that change in both (1) translation and (2) scaling throughout 
+    a video stream.
+
+10)Threshold tracking :-
+    This type of tracking works very similar to hsv where the object to be tracked has to be segmented from the background. But instead
+    of color, thresholding is used for segmenting the object of interest. Thresholding means that above a particular value of the pixel in a gray scale 
+    image all the pixels are set to white while others below this threshold are set to black hence creating a binary image. Finding the proper
+    thresholding values is difficult.
+    
+    Pros : Fast and works very well under stable lighting conditions
+    Cons : Fails when lighting condition changes and a lot to parameters to tune for proper tracking.
+'''
 
     editArea_info.configure(state='normal')
     editArea_info.insert('end', text)
