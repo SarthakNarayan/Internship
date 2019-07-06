@@ -14,6 +14,7 @@ import matplotlib.pyplot as plt
 import allantools
 import dlib
 import tkinter.ttk as ttk
+import textwrap
 #########################################################################################################
 
 #########################################################################################################
@@ -144,16 +145,22 @@ def SaveFile():
 # Contains information about the program
 def About():
     about_window = Toplevel()
-    about_window.geometry("500x500")
+    about_window.geometry("250x300")
     about_window.title("About the Software")
+    about_window.resizable(FALSE , FALSE)
 
     scrollbar = Scrollbar(about_window)
-    editArea_about = Text(about_window, width=50, height=50, wrap="word",
+    editArea_about = Text(about_window, width=28, height=32, wrap="word",
                           yscrollcommand=scrollbar.set,
                           borderwidth=0, highlightthickness=0)
 
-    text = '1 \n 1 \n 1 \n 1 \n 1 \n 1 \n 1 \n 1 \n 1 \n 1 \n 1 \n 1 \n 1 \n 1 \n 1 \n'
+    text = ''' Created by : Sarthak Narayan \n Version : 2019.07 \n License : MIT License 
+    \n Dependencies Python : 3.6.8 \n OpenCV : 3.4.2 \n Tkinter : 8.6 \n PIL : 5.4.1 
+ numpy : 1.16.2 \n Matplotlib : 2.2.2 \n Allan Tools : 2018.03 \n Dlib : 19.7.0 
+     \n \nIF THE PROGRAM DOESNT WORK AS INTENDED THEN TRY CHECKING AND MATCHING THE VERSIONS \
+WITH THE ONES MENTIONED ABOVE'''
 
+    textwrap.dedent(text)
     editArea_about.configure(state='normal')
     editArea_about.insert('end', text)
     editArea_about.configure(state='disabled')
@@ -169,16 +176,72 @@ def About():
 def Use():
 
     instructions_window = Toplevel()
-    instructions_window.geometry("500x500")
+    instructions_window.geometry("1000x600")
     instructions_window.title("Use Instructions")
+    instructions_window.resizable(FALSE , FALSE)
 
     scrollbar = Scrollbar(instructions_window)
-    editArea_use = Text(instructions_window, width=50, height=50, wrap="word",
+    editArea_use = Text(instructions_window, width=100, height=80, wrap="word",
                         yscrollcommand=scrollbar.set,
                         borderwidth=0, highlightthickness=0)
 
-    text = '1 \n 1 \n 1 \n 1 \n 1 \n 1 \n 1 \n 1 \n 1 \n 1 \n 1 \n 1 \n 1 \n 1 \n 1 \n'
+    text = ''' \t \t \t \t \t \t \t USE INSTRUCTIONS \n
+1)FOR COLLECTING DATA : 
+    i)Choose the tracker either from trackers or other algorithms submenu. By default csrt tracker is selected.
+   ii)If webcam or usb camera has to be used click on the webcam radio button and specify the camera number.
+      By default it is 0 for webcam and starts from 1 for usb cameras.
+  iii)Now click on start tracking button to go to the tracking window.
+   iv)If a video from the computer has to be used then first go to file menu and then select open,
+      It will open a dialog box. Choose the video.
+    v)Click on the Use video radio button and then click on start tracking button to start tracking.
+    
+      NOTE: If hsv tracking is selected from other algorithms option then a window will appear which will ask you 
+            to set the HSV values for color filtering. Once done filtering use ESC key to quit that window. Now 
+            click on start tracking button on the main window.
+      NOTE: For quickly getting the hsv values set h2w , s2w , v2w to maximum the start increasing h1w , s1w , v1w
+            and decreasing h2w , s2w , v2w to get the desired color values.
+          
+2)Tracking the Particles :
+    i)Pause button in the tracking window can be used for pausing the window.
+   ii)Use the select the button to select the region or object to be tracked. 
+      When the select window is pressed the video will be paused and a new window will appear.
+      On the new window drag and leave the left mouse key to make a bounding box around the object, press enter 
+      to go back to the tracking window. If the selection is wrong then to cancel it press c.
+  iii)Once the particle is selected the bounding box will appear on the main tracking window. Click on Draw and 
+      and collect button to start collecting data of the position of the particle. This will also draw x and y 
+      axes on the screen. If you want to start tracking again press the button again. It will reset the previously
+      collected values and draw new x and y axes
+   iv)Once done with tracking press the exit button and a save window will appear destroying the curent tracking 
+      window.
 
+      NOTE: Same process applies when hsv or thresholding tracking is used. Just there are more options to play with
+            and there is no select button. To start tracking try to isolate a single particle or use maximum area mode.
+            Once done click on the draw and collect button.
+      NOTE: The axes drawn take the center of the particle as their origin and the all the coordinates stored for 
+            processing are calculated with respect to the origin.     
+             
+3)Saving the data :
+    i)Select the directory where the data is to be saved by clicking on the Directory button. It will open a dialog box
+      for selecting the directory.
+   ii)Write the name of the files to be saved. DONT CHANGE THE EXTENSIONS.
+  iii)Click on the save button to save the files. A pop up will appear saying that files have been saved successfully.
+     
+4)Plotting the data :
+    i)To plot the data click on value plotter button.
+   ii)Select the X and Y values by clicking on respective buttons and choosing the files from the dialog box.
+  iii)Time values can also be selected by the same process to use time values tick the checkbox.
+   iv)Click on plot button to get the matplotlib plot.
+   
+5)Plotting allan deviation :
+    i)To plot allan deviation click on ADEV plotter button in the main window.
+   ii)Select the value for which you want to plot the allan deviation by using the select values button.
+      It will open a dialog box to choose the file.
+  iii)If you plotting for X values choose the Use X radio button or vice verse.
+   iv)Select the rate and click on plot allan deviation button.
+   
+      Note: If you want to see allan deviation plots for multiple plots just change the rate and click on plot allan
+            allan deviation button again.   '''
+    
     editArea_use.configure(state='normal')
     editArea_use.insert('end', text)
     editArea_use.configure(state='disabled')
