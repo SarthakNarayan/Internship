@@ -927,15 +927,17 @@ def StartTracking():
     # This function is called once exit button in the tracker window is pressed
     # This opens up a new window and asks for save location and name of files
     def exitt():
-        global end_time, total_time
+        global end_time, total_time , draw , collection
         end_time = time.time()
         total_time = end_time-start_time
+        draw = False
+        collection = False
         print(pos_x)
         print(pos_y)
         cap.release()
 
         # destroy the particular tracker window depending upon the tracker
-        if tracker.get() == 'hsv':
+        if tracker.get() == 'hsv' or tracker.get() == 'thresh':
             hsv_tracker_window.destroy()
         else:
             tracker_window.destroy()
